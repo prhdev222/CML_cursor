@@ -1,0 +1,95 @@
+{
+  "common": {
+    "appName": "CML Management System",
+    "welcome": "Welcome",
+    "dashboard": "Dashboard",
+    "patients": "Patients",
+    "monitoring": "Monitoring",
+    "tkiManagement": "TKI Management",
+    "guidelines": "Guidelines",
+    "research": "Research Papers",
+    "settings": "Settings",
+    "logout": "Logout",
+    "login": "Login",
+    "save": "Save",
+    "cancel": "Cancel",
+    "delete": "Delete",
+    "edit": "Edit",
+    "add": "Add",
+    "search": "Search",
+    "filter": "Filter",
+    "export": "Export",
+    "import": "Import",
+    "language": "Language",
+    "english": "English",
+    "thai": "Thai"
+  },
+  "patient": {
+    "title": "Patient Management",
+    "addPatient": "Add New Patient",
+    "patientList": "Patient List",
+    "patientId": "Patient ID",
+    "name": "Name",
+    "age": "Age",
+    "gender": "Gender",
+    "diagnosisDate": "Diagnosis Date",
+    "currentTKI": "Current TKI",
+    "phase": "Phase",
+    "chronicPhase": "Chronic Phase",
+    "acceleratedPhase": "Accelerated Phase",
+    "blastPhase": "Blast Phase"
+  },
+  "monitoring": {
+    "title": "Monitoring & Alerts",
+    "upcomingTests": "Upcoming Tests",
+    "overdueTests": "Overdue Tests",
+    "testResults": "Test Results",
+    "bcrAbl": "BCR-ABL1 (IS)",
+    "cbc": "Complete Blood Count",
+    "cytogenetic": "Cytogenetic Analysis",
+    "lastTest": "Last Test",
+    "nextTest": "Next Test",
+    "status": "Status",
+    "optimal": "Optimal",
+    "warning": "Warning",
+    "failure": "Failure"
+  },
+  "tki": {
+    "title": "TKI Management",
+    "currentTKI": "Current TKI",
+    "switchTKI": "Switch TKI",
+    "reason": "Reason",
+    "molecularFailure": "Molecular Failure",
+    "intolerance": "Intolerance",
+    "imatinib": "Imatinib (Gleevec)",
+    "nilotinib": "Nilotinib (Tasigna)",
+    "dasatinib": "Dasatinib (Sprycel)",
+    "ponatinib": "Ponatinib (Iclusig)",
+    "sideEffects": "Side Effects",
+    "contraindications": "Contraindications"
+  },
+  "guidelines": {
+    "title": "Clinical Guidelines",
+    "nccn": "NCCN Guidelines",
+    "eln": "ELN 2020 Recommendations",
+    "tsh": "Thai Society of Hematology Guidelines",
+    "viewGuideline": "View Guideline",
+    "description": "Access the latest clinical guidelines for CML management"
+  },
+  "research": {
+    "title": "Research Papers",
+    "latestPapers": "Latest Research Papers",
+    "searchPapers": "Search Papers",
+    "noResults": "No research papers found"
+  },
+  "alerts": {
+    "molecularFailure": "Molecular Failure Detected",
+    "switchTKIRequired": "TKI Switch Required",
+    "overdueTest": "Overdue Test",
+    "progressionRisk": "Disease Progression Risk",
+    "pleuralEffusion": "Pleural Effusion Risk (Dasatinib)",
+    "cardiacRisk": "Cardiac Risk (Nilotinib/Ponatinib)",
+    "arterialThrombosis": "Arterial Thrombosis Risk (Ponatinib)"
+  }
+}
+

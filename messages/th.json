@@ -1,0 +1,95 @@
+{
+  "common": {
+    "appName": "ระบบจัดการผู้ป่วย CML",
+    "welcome": "ยินดีต้อนรับ",
+    "dashboard": "แดชบอร์ด",
+    "patients": "ผู้ป่วย",
+    "monitoring": "การติดตามผล",
+    "tkiManagement": "การจัดการ TKI",
+    "guidelines": "แนวทางปฏิบัติ",
+    "research": "งานวิจัย",
+    "settings": "การตั้งค่า",
+    "logout": "ออกจากระบบ",
+    "login": "เข้าสู่ระบบ",
+    "save": "บันทึก",
+    "cancel": "ยกเลิก",
+    "delete": "ลบ",
+    "edit": "แก้ไข",
+    "add": "เพิ่ม",
+    "search": "ค้นหา",
+    "filter": "กรอง",
+    "export": "ส่งออก",
+    "import": "นำเข้า",
+    "language": "ภาษา",
+    "english": "English",
+    "thai": "ไทย"
+  },
+  "patient": {
+    "title": "การจัดการผู้ป่วย",
+    "addPatient": "เพิ่มผู้ป่วยใหม่",
+    "patientList": "รายชื่อผู้ป่วย",
+    "patientId": "รหัสผู้ป่วย",
+    "name": "ชื่อ",
+    "age": "อายุ",
+    "gender": "เพศ",
+    "diagnosisDate": "วันที่วินิจฉัย",
+    "currentTKI": "TKI ปัจจุบัน",
+    "phase": "ระยะโรค",
+    "chronicPhase": "ระยะเรื้อรัง",
+    "acceleratedPhase": "ระยะเร่ง",
+    "blastPhase": "ระยะวิกฤติ"
+  },
+  "monitoring": {
+    "title": "การติดตามผลและการแจ้งเตือน",
+    "upcomingTests": "การตรวจที่กำลังจะถึง",
+    "overdueTests": "การตรวจที่เลยกำหนด",
+    "testResults": "ผลการตรวจ",
+    "bcrAbl": "BCR-ABL1 (IS)",
+    "cbc": "การตรวจนับเม็ดเลือด",
+    "cytogenetic": "การวิเคราะห์เซลล์พันธุกรรม",
+    "lastTest": "การตรวจครั้งล่าสุด",
+    "nextTest": "การตรวจครั้งถัดไป",
+    "status": "สถานะ",
+    "optimal": "เหมาะสม",
+    "warning": "เฝ้าระวัง",
+    "failure": "ล้มเหลว"
+  },
+  "tki": {
+    "title": "การจัดการ TKI",
+    "currentTKI": "TKI ปัจจุบัน",
+    "switchTKI": "เปลี่ยน TKI",
+    "reason": "เหตุผล",
+    "molecularFailure": "ความล้มเหลวทางโมเลกุล",
+    "intolerance": "ทนยาไม่ได้",
+    "imatinib": "Imatinib (Gleevec)",
+    "nilotinib": "Nilotinib (Tasigna)",
+    "dasatinib": "Dasatinib (Sprycel)",
+    "ponatinib": "Ponatinib (Iclusig)",
+    "sideEffects": "ผลข้างเคียง",
+    "contraindications": "ข้อห้ามใช้"
+  },
+  "guidelines": {
+    "title": "แนวทางปฏิบัติทางคลินิก",
+    "nccn": "แนวทาง NCCN",
+    "eln": "คำแนะนำ ELN 2020",
+    "tsh": "แนวทางสมาคมโลหิตวิทยาประเทศไทย",
+    "viewGuideline": "ดูแนวทาง",
+    "description": "เข้าถึงแนวทางปฏิบัติทางคลินิกล่าสุดสำหรับการจัดการ CML"
+  },
+  "research": {
+    "title": "งานวิจัย",
+    "latestPapers": "งานวิจัยล่าสุด",
+    "searchPapers": "ค้นหางานวิจัย",
+    "noResults": "ไม่พบงานวิจัย"
+  },
+  "alerts": {
+    "molecularFailure": "ตรวจพบความล้มเหลวทางโมเลกุล",
+    "switchTKIRequired": "จำเป็นต้องเปลี่ยน TKI",
+    "overdueTest": "การตรวจเลยกำหนด",
+    "progressionRisk": "ความเสี่ยงการลุกลามของโรค",
+    "pleuralEffusion": "ความเสี่ยงน้ำในเยื่อหุ้มปอด (Dasatinib)",
+    "cardiacRisk": "ความเสี่ยงหัวใจ (Nilotinib/Ponatinib)",
+    "arterialThrombosis": "ความเสี่ยงลิ่มเลือดอุดตันในหลอดเลือดแดง (Ponatinib)"
+  }
+}
+

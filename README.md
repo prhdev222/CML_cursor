@@ -1,36 +1,170 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# CML Management System
+
+ระบบสนับสนุนการตัดสินใจทางคลินิก (CDSS) สำหรับการจัดการผู้ป่วยโรคมะเร็งเม็ดเลือดขาวชนิดเรื้อรังแบบมัยอีลอยด์ (Chronic Myeloid Leukemia - CML)
+
+## Features
+
+- 📋 **Patient Management**: จัดการข้อมูลผู้ป่วย CML
+- 📊 **Monitoring & Alerts**: ติดตามผลการตรวจ BCR-ABL1, CBC, และ Cytogenetic
+- 💊 **TKI Management**: จัดการการเปลี่ยนยา TKI ตามเกณฑ์ ELN 2020
+- 📖 **Clinical Guidelines**: ลิงก์ไปยังแนวทาง NCCN และ ELN 2020
+- 📚 **Research Papers**: งานวิจัยล่าสุดเกี่ยวกับ CML
+- 🌐 **Multi-language**: รองรับทั้งภาษาไทยและอังกฤษ
+- 📱 **Responsive Design**: รองรับทั้ง Desktop และ Mobile
+
+## Tech Stack
+
+- **Framework**: Next.js 16 (App Router)
+- **Styling**: Tailwind CSS
+- **Database**: Supabase (PostgreSQL)
+- **Internationalization**: next-intl
+- **State Management**: Zustand
+- **Date Handling**: date-fns
 
 ## Getting Started
 
-First, run the development server:
+### Prerequisites
 
+- Node.js 20 or higher
+- npm or yarn
+- Supabase account (self-hosted or cloud)
+
+### Installation
+
+1. Clone the repository:
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+git clone <your-repo-url>
+cd cml-management-system
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+2. Install dependencies:
+```bash
+npm install
+```
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+3. Set up environment variables:
+```bash
+cp .env.example .env
+```
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+Edit `.env` and add your Supabase credentials:
+```
+NEXT_PUBLIC_SUPABASE_URL=your_supabase_url
+NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
+```
 
-## Learn More
+4. Set up Supabase database:
+   - Go to your Supabase SQL Editor
+   - Run the SQL script from `supabase/schema.sql`
 
-To learn more about Next.js, take a look at the following resources:
+5. Run the development server:
+```bash
+npm run dev
+```
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+Open [http://localhost:3000](http://localhost:3000) in your browser.
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## Deployment
 
-## Deploy on Vercel
+### Deploy to Coolify (Self-hosted on Hostinger VPS)
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+1. Push your code to GitHub
+2. In Coolify, create a new application
+3. Connect your GitHub repository
+4. Set environment variables in Coolify:
+   - `NEXT_PUBLIC_SUPABASE_URL`
+   - `NEXT_PUBLIC_SUPABASE_ANON_KEY`
+5. Deploy!
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+### Deploy to Vercel (Free Tier)
+
+1. Push your code to GitHub
+2. Import project in Vercel
+3. Add environment variables:
+   - `NEXT_PUBLIC_SUPABASE_URL`
+   - `NEXT_PUBLIC_SUPABASE_ANON_KEY`
+4. Deploy!
+
+### Deploy using Docker
+
+1. Build the Docker image:
+```bash
+docker build -t cml-management-system .
+```
+
+2. Run the container:
+```bash
+docker run -p 3000:3000 \
+  -e NEXT_PUBLIC_SUPABASE_URL=your_url \
+  -e NEXT_PUBLIC_SUPABASE_ANON_KEY=your_key \
+  cml-management-system
+```
+
+## Project Structure
+
+```
+cml-management-system/
+├── app/
+│   └── [locale]/          # Internationalized routes
+│       ├── layout.tsx
+│       ├── page.tsx
+│       ├── patients/
+│       ├── monitoring/
+│       ├── tki/
+│       ├── guidelines/
+│       └── research/
+├── components/
+│   ├── patients/          # Patient management components
+│   ├── monitoring/        # Monitoring components
+│   ├── tki/               # TKI management components
+│   └── ui/                # Reusable UI components
+├── lib/
+│   └── supabase.ts        # Supabase client
+├── messages/              # Translation files
+│   ├── en.json
+│   └── th.json
+├── supabase/
+│   └── schema.sql         # Database schema
+└── public/                # Static assets
+```
+
+## Key Features Implementation
+
+### ELN 2020 Milestones
+- 3 months: BCR-ABL1 IS ≤ 10%
+- 6 months: BCR-ABL1 IS ≤ 1% (CCyR)
+- 12 months: BCR-ABL1 IS ≤ 0.1% (MMR)
+- After 12 months: Maintain BCR-ABL1 IS ≤ 0.1%
+
+### Monitoring Frequency
+- Year 1: RQ-PCR every 3 months
+- Year 2: RQ-PCR every 3 months (after CCyR)
+- After 2 years: RQ-PCR every 3-6 months
+- CBC: Every 15 days until CHR, then every 3 months
+
+### TKI Management
+- Track TKI switches based on molecular failure or intolerance
+- Alert system for TKI switch requirements
+- Side effect monitoring
+
+## Contributing
+
+1. Fork the repository
+2. Create your feature branch (`git checkout -b feature/AmazingFeature`)
+3. Commit your changes (`git commit -m 'Add some AmazingFeature'`)
+4. Push to the branch (`git push origin feature/AmazingFeature`)
+5. Open a Pull Request
+
+## License
+
+This project is licensed under the MIT License.
+
+## Support
+
+For support, please open an issue in the GitHub repository.
+
+## Acknowledgments
+
+- European LeukemiaNet (ELN) 2020 Recommendations
+- NCCN Clinical Practice Guidelines
+- All researchers and clinicians working on CML treatment
