@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { supabase } from '@/lib/supabase';
+import { supabaseAdmin } from '@/lib/supabase-admin';
 import bcrypt from 'bcryptjs';
 
 export async function POST(request: NextRequest) {
@@ -20,8 +20,8 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Check if patient exists
-    const { data: patientData, error: fetchError } = await (supabase
+    // Check if patient exists (using admin client to bypass RLS)
+    const { data: patientData, error: fetchError } = await (supabaseAdmin
       .from('patients') as any)
       .select('password_hash')
       .eq('patient_id', patient_id)
@@ -37,8 +37,8 @@ export async function POST(request: NextRequest) {
     // Hash password
     const passwordHash = await bcrypt.hash(password, 10);
 
-    // Update patient password
-    const { error: updateError } = await (supabase
+    // Update patient password (using admin client to bypass RLS)
+    const { error: updateError } = await (supabaseAdmin
       .from('patients') as any)
       .update({ password_hash: passwordHash })
       .eq('patient_id', patient_id);

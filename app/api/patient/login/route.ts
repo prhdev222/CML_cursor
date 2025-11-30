@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { supabase } from '@/lib/supabase';
+import { supabaseAdmin } from '@/lib/supabase-admin';
 import bcrypt from 'bcryptjs';
 
 export async function POST(request: NextRequest) {
@@ -13,8 +13,8 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Fetch patient from database
-    const { data, error: fetchError } = await (supabase
+    // Fetch patient from database (using admin client to bypass RLS)
+    const { data, error: fetchError } = await (supabaseAdmin
       .from('patients') as any)
       .select('*')
       .eq('patient_id', patient_id)

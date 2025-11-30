@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { supabase } from '@/lib/supabase';
+import { supabaseAdmin } from '@/lib/supabase-admin';
 import bcrypt from 'bcryptjs';
 
 /**
@@ -8,8 +8,8 @@ import bcrypt from 'bcryptjs';
  */
 export async function GET() {
   try {
-    // Check if admin exists
-    const { data } = await supabase
+    // Check if admin exists (using admin client to bypass RLS)
+    const { data } = await supabaseAdmin
       .from('admins')
       .select('*')
       .eq('username', 'admin')
@@ -25,7 +25,7 @@ export async function GET() {
     // Create default admin with password: admin123
     const passwordHash = await bcrypt.hash('admin123', 10);
     
-    const { error } = await (supabase.from('admins') as any).insert([
+    const { error } = await (supabaseAdmin.from('admins') as any).insert([
       {
         username: 'admin',
         password_hash: passwordHash,

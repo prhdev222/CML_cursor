@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { supabase } from '@/lib/supabase';
+import { supabaseAdmin } from '@/lib/supabase-admin';
 import bcrypt from 'bcryptjs';
 
 export async function POST(request: NextRequest) {
@@ -23,8 +23,8 @@ export async function POST(request: NextRequest) {
     // Hash password
     const passwordHash = await bcrypt.hash(new_password, 10);
 
-    // Update patient password
-    const { error } = await (supabase
+    // Update patient password (using admin client to bypass RLS)
+    const { error } = await (supabaseAdmin
       .from('patients') as any)
       .update({ 
         password_hash: passwordHash,
