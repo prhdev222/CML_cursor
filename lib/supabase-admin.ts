@@ -18,14 +18,15 @@ const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
 const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY || '';
 
 // Validate environment variables
-const isConfigValid = 
+const isConfigValid: boolean = Boolean(
   supabaseUrl && 
   serviceRoleKey &&
   supabaseUrl !== 'your_supabase_url_here' &&
   serviceRoleKey !== 'your_service_role_key_here' &&
   !supabaseUrl.includes('placeholder') &&
   supabaseUrl.startsWith('https://') &&
-  serviceRoleKey.startsWith('eyJ');
+  serviceRoleKey.startsWith('eyJ')
+);
 
 if (!isConfigValid) {
   if (typeof window === 'undefined') {
