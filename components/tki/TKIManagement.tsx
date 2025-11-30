@@ -25,42 +25,18 @@ export default function TKIManagement() {
 
   const fetchTKIRecords = async () => {
     try {
-      // Check if Supabase is configured before making the request
-      const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
-      if (!supabaseUrl || supabaseUrl.includes('placeholder') || supabaseUrl === 'your_supabase_url_here') {
-        setTkiRecords([]);
-        setLoading(false);
-        return;
-      }
-      
-      const { data, error: supabaseError } = await supabase
-        .from('tki_records')
-        .select('*')
-        .order('start_date', { ascending: false })
-        .limit(10);
+      const response = await fetch('/api/tki-records?limit=10');
+      const result = await response.json();
 
-      if (supabaseError) {
-        // Silently fail if Supabase is not configured
-        if (isSupabaseConfigError(supabaseError)) {
-          setTkiRecords([]);
-          setLoading(false);
-          return;
-        }
-        // Only log non-config errors
-        if (!isSupabaseConfigError(supabaseError)) {
-          console.error('Error fetching TKI records:', supabaseError);
-        }
+      if (!result.success) {
+        console.error('Error fetching TKI records:', result.error);
         setTkiRecords([]);
-        setLoading(false);
         return;
       }
       
-      setTkiRecords(data || []);
+      setTkiRecords(result.data || []);
     } catch (error: any) {
-      // Only log if it's not a config error
-      if (!isSupabaseConfigError(error)) {
-        console.error('Error fetching TKI records:', error);
-      }
+      console.error('Error fetching TKI records:', error);
       setTkiRecords([]);
     } finally {
       setLoading(false);

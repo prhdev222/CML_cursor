@@ -31,21 +31,18 @@ export default function AdminMedicationsPage() {
 
   const fetchMedications = async () => {
     try {
-      const { data, error } = await supabase
-        .from('tki_medications')
-        .select('*')
-        .order('sort_order', { ascending: true });
+      const response = await fetch('/api/tki-medications');
+      const result = await response.json();
 
-      if (error) {
-        console.error('Supabase error:', error);
-        if (error.code === '42P01' || error.message?.includes('does not exist')) {
+      if (!result.success) {
+        console.error('Error fetching medications:', result.error);
+        if (result.error?.includes('does not exist') || result.error?.includes('42P01')) {
           alert('กรุณารัน migration SQL เพื่อสร้างตาราง tki_medications ก่อน\n\nไฟล์: supabase/migrations/007_add_tki_management.sql');
-          setMedications([]);
-          return;
         }
-        throw error;
+        setMedications([]);
+        return;
       }
-      setMedications(data || []);
+      setMedications(result.data || []);
     } catch (error: any) {
       console.error('Error fetching medications:', error);
       alert(`เกิดข้อผิดพลาดในการโหลดข้อมูล: ${error?.message || 'Unknown error'}`);
@@ -126,11 +123,15 @@ export default function AdminMedicationsPage() {
     if (!confirm('คุณแน่ใจหรือไม่ว่าต้องการลบยานี้?')) return;
 
     try {
-      const { error } = await supabase.from('tki_medications').delete().eq('id', id);
-      if (error) throw error;
+      const response = await fetch(`/api/tki-medications/${id}`, {
+        method: 'DELETE',
+      });
+      const result = await response.json();
+      
+      if (!result.success) throw new Error(result.error);
       clearTKICache();
       fetchMedications();
-    } catch (error) {
+    } catch (error: any) {
       alert('เกิดข้อผิดพลาดในการลบ');
       console.error(error);
     }
@@ -141,41 +142,48 @@ export default function AdminMedicationsPage() {
 
     try {
       if (editingMedication) {
-        const { error } = await (supabase
-          .from('tki_medications') as any)
-          .update({
+        const response = await fetch(`/api/tki-medications/${editingMedication.id}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
             name_th: formData.name_th,
             name_en: formData.name_en,
             side_effects: formData.side_effects.filter(s => s.trim() !== ''),
             monitoring: formData.monitoring.filter(m => m.trim() !== ''),
             is_active: formData.is_active,
             sort_order: formData.sort_order,
-          })
-          .eq('id', editingMedication.id);
-
-        if (error) throw error;
+          }),
+        });
+        const result = await response.json();
+        if (!result.success) throw new Error(result.error);
       } else {
-        const { data: existing } = await supabase
-          .from('tki_medications')
-          .select('id')
-          .eq('medication_key', formData.medication_key)
-          .single();
-
-        if (existing) {
-          alert('medication_key นี้มีอยู่แล้ว กรุณาใช้ key อื่น');
-          return;
+        // Check if medication_key exists
+        const checkResponse = await fetch('/api/tki-medications');
+        const checkResult = await checkResponse.json();
+        
+        if (checkResult.success && checkResult.data) {
+          const existing = checkResult.data.find((m: any) => m.medication_key === formData.medication_key);
+          if (existing) {
+            alert('medication_key นี้มีอยู่แล้ว กรุณาใช้ key อื่น');
+            return;
+          }
         }
 
-        const { error } = await (supabase.from('tki_medications') as any).insert([{
-          medication_key: formData.medication_key,
-          name_th: formData.name_th,
-          name_en: formData.name_en,
-          side_effects: formData.side_effects.filter(s => s.trim() !== ''),
-          monitoring: formData.monitoring.filter(s => s.trim() !== ''),
-          is_active: formData.is_active,
-          sort_order: formData.sort_order,
-        }]);
-        if (error) throw error;
+        const response = await fetch('/api/tki-medications', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            medication_key: formData.medication_key,
+            name_th: formData.name_th,
+            name_en: formData.name_en,
+            side_effects: formData.side_effects.filter(s => s.trim() !== ''),
+            monitoring: formData.monitoring.filter(s => s.trim() !== ''),
+            is_active: formData.is_active,
+            sort_order: formData.sort_order,
+          }),
+        });
+        const result = await response.json();
+        if (!result.success) throw new Error(result.error);
       }
 
       clearTKICache();

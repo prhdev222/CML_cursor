@@ -47,15 +47,14 @@ export default function AdminAlertsPage() {
 
   const fetchPatients = async () => {
     try {
-      const { data, error } = await (supabase
-        .from('patients') as any)
-        .select('patient_id, name, diagnosis_date');
+      const response = await fetch('/api/patients');
+      const result = await response.json();
 
-      if (error) throw error;
+      if (!result.success) throw new Error(result.error);
 
       const patientsMap = new Map<string, Patient>();
-      if (data) {
-        data.forEach((p: Patient) => {
+      if (result.data) {
+        result.data.forEach((p: Patient) => {
           patientsMap.set(p.patient_id, p);
         });
       }
@@ -74,13 +73,12 @@ export default function AdminAlertsPage() {
       // Fetch patients if not already loaded
       let currentPatientsMap = patients;
       if (currentPatientsMap.size === 0) {
-        const { data: patientsData } = await (supabase
-          .from('patients') as any)
-          .select('patient_id, name, diagnosis_date');
+        const patientsResponse = await fetch('/api/patients');
+        const patientsResult = await patientsResponse.json();
         
-        if (patientsData) {
+        if (patientsResult.success && patientsResult.data) {
           currentPatientsMap = new Map<string, Patient>();
-          patientsData.forEach((p: Patient) => {
+          patientsResult.data.forEach((p: Patient) => {
             currentPatientsMap.set(p.patient_id, p);
           });
           setPatients(currentPatientsMap);
@@ -88,29 +86,26 @@ export default function AdminAlertsPage() {
       }
 
       // Fetch unresolved alerts
-      const { data: alertsData, error } = await (supabase
-        .from('alerts') as any)
-        .select('*')
-        .eq('resolved', false)
-        .order('created_at', { ascending: false });
+      const alertsResponse = await fetch('/api/alerts?resolved=false');
+      const alertsResult = await alertsResponse.json();
 
-      if (error) throw error;
+      if (!alertsResult.success) throw new Error(alertsResult.error);
+
+      const alertsData = alertsResult.data || [];
 
       // Fetch latest test results for each patient to get test_date and bcr_abl_is
-      const patientIds = [...new Set((alertsData || []).map((a: any) => a.patient_id))];
+      const patientIds = [...new Set(alertsData.map((a: any) => a.patient_id))];
       
       const testResultsMap = new Map<string, any>();
       if (patientIds.length > 0) {
-        const { data: testResults } = await (supabase
-          .from('test_results') as any)
-          .select('patient_id, test_date, bcr_abl_is, test_type')
-          .in('patient_id', patientIds)
-          .in('test_type', ['RQ-PCR', 'RQ-PCR for BCR-ABL'])
-          .order('test_date', { ascending: false });
+        const testResultsResponse = await fetch(
+          `/api/test-results?patient_ids=${patientIds.join(',')}&test_type=RQ-PCR,RQ-PCR for BCR-ABL`
+        );
+        const testResultsResult = await testResultsResponse.json();
 
-        if (testResults) {
+        if (testResultsResult.success && testResultsResult.data) {
           // Get latest test result for each patient that has bcr_abl_is
-          testResults.forEach((result: any) => {
+          testResultsResult.data.forEach((result: any) => {
             if (result.bcr_abl_is != null && !testResultsMap.has(result.patient_id)) {
               testResultsMap.set(result.patient_id, result);
             }
@@ -162,12 +157,14 @@ export default function AdminAlertsPage() {
   const handleResolve = async (alertId: string) => {
     try {
       setResolving(alertId);
-      const { error } = await (supabase
-        .from('alerts') as any)
-        .update({ resolved: true })
-        .eq('id', alertId);
+      const response = await fetch(`/api/alerts/${alertId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ resolved: true }),
+      });
+      const result = await response.json();
 
-      if (error) throw error;
+      if (!result.success) throw new Error(result.error);
 
       // Remove from list
       setAlerts(alerts.filter(a => a.id !== alertId));

@@ -22,29 +22,47 @@ export default function TKISwitchForm() {
 
     try {
       // End current TKI record
-      await (supabase
-        .from('tki_records') as any)
-        .update({ end_date: new Date().toISOString() })
-        .eq('patient_id', formData.patient_id)
-        .is('end_date', null);
+      await fetch('/api/tki-records/update', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          filter: {
+            patient_id: formData.patient_id,
+            end_date_is_null: true,
+          },
+          update: { end_date: new Date().toISOString() },
+        }),
+      });
 
       // Create new TKI record
-      const { error } = await (supabase.from('tki_records') as any).insert([
-        {
+      const tkiResponse = await fetch('/api/tki-records', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify([{
           patient_id: formData.patient_id,
           tki_name: formData.new_tki,
           start_date: new Date().toISOString(),
           reason: formData.reason,
-        },
-      ]);
+        }]),
+      });
+      const tkiResult = await tkiResponse.json();
+      if (!tkiResult.success) throw new Error(tkiResult.error);
 
-      if (error) throw error;
-
-      // Update patient's current TKI
-      await (supabase
-        .from('patients') as any)
-        .update({ current_tki: formData.new_tki })
-        .eq('patient_id', formData.patient_id);
+      // Find patient by patient_id and update
+      const patientsResponse = await fetch('/api/patients');
+      const patientsResult = await patientsResponse.json();
+      if (!patientsResult.success) throw new Error(patientsResult.error);
+      
+      const patient = patientsResult.data.find((p: any) => p.patient_id === formData.patient_id);
+      if (patient) {
+        const updateResponse = await fetch(`/api/patients/${patient.id}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ current_tki: formData.new_tki }),
+        });
+        const updateResult = await updateResponse.json();
+        if (!updateResult.success) throw new Error(updateResult.error);
+      }
 
       alert('TKI switch recorded successfully!');
       setFormData({
