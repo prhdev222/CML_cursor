@@ -118,18 +118,29 @@ export default function AdminMonitoringPage() {
       setLoading(true);
       const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
       
-      const { data, error } = await (supabase
-        .from('test_results') as any)
-        .select(`
-          *,
-          patient:patients(patient_id, name)
-        `)
-        .gte('test_date', thirtyDaysAgo)
-        .order('test_date', { ascending: false })
-        .limit(50);
+      const response = await fetch(`/api/test-results?limit=50`);
+      const result = await response.json();
 
-      if (error) throw error;
-      setRecentTests(data || []);
+      if (!result.success) throw new Error(result.error);
+
+      // Filter by date and add patient info
+      const filteredTests = (result.data || [])
+        .filter((test: any) => test.test_date >= thirtyDaysAgo)
+        .map(async (test: any) => {
+          // Fetch patient info
+          const patientResponse = await fetch(`/api/patients?patient_id=${test.patient_id}`);
+          const patientResult = await patientResponse.json();
+          if (patientResult.success && patientResult.data && patientResult.data.length > 0) {
+            test.patient = {
+              patient_id: patientResult.data[0].patient_id,
+              name: patientResult.data[0].name,
+            };
+          }
+          return test;
+        });
+
+      const testsWithPatients = await Promise.all(filteredTests);
+      setRecentTests(testsWithPatients);
     } catch (error) {
       console.error('Error fetching recent tests:', error);
     } finally {
@@ -496,11 +507,13 @@ export default function AdminMonitoringPage() {
         }
       }
 
-      const { error } = await (supabase
-        .from('test_results') as any)
-        .insert(testResultData);
-
-      if (error) throw error;
+      const response = await fetch('/api/test-results', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(testResultData),
+      });
+      const result = await response.json();
+      if (!result.success) throw new Error(result.error);
 
       // Generate alerts if RQ-PCR for BCR-ABL
       if (formData.test_type === 'RQ-PCR for BCR-ABL' && bcr_abl_value !== null && selectedPatient) {

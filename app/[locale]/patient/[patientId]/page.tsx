@@ -117,24 +117,17 @@ export default function PatientPortalPage() {
       setError('');
       
       // Fetch patient with hospital info
-      const { data: patientData, error: patientError } = await (supabase
-        .from('patients') as any)
-        .select(`
-          *,
-          hospitals:hospital_id (
-            id,
-            name
-          )
-        `)
-        .eq('patient_id', patientId)
-        .single();
+      const patientsResponse = await fetch('/api/patients');
+      const patientsResult = await patientsResponse.json();
 
-      if (patientError) {
-        console.error('Patient fetch error:', patientError);
-        setError(`ไม่พบข้อมูลผู้ป่วย: ${patientError.message}`);
+      if (!patientsResult.success) {
+        console.error('Patient fetch error:', patientsResult.error);
+        setError(`ไม่พบข้อมูลผู้ป่วย: ${patientsResult.error}`);
         setLoading(false);
         return;
       }
+
+      const patientData = patientsResult.data?.find((p: any) => p.patient_id === patientId);
 
       if (!patientData) {
         setError('ไม่พบข้อมูลผู้ป่วย');
@@ -145,7 +138,7 @@ export default function PatientPortalPage() {
       // Transform hospital data
       const transformedPatient = {
         ...patientData,
-        hospital: patientData.hospitals ? { name: patientData.hospitals.name } : null,
+        hospital: patientData.hospital ? { name: patientData.hospital.name } : null,
       };
       
       setPatient(transformedPatient);
@@ -173,22 +166,22 @@ export default function PatientPortalPage() {
       }
 
       // Fetch test results
-      const { data: testData, error: testError } = await (supabase
-        .from('test_results') as any)
-        .select('*')
-        .eq('patient_id', patientId)
-        .in('test_type', ['RQ-PCR', 'RQ-PCR for BCR-ABL'])
-        .order('test_date', { ascending: true });
+      const testResponse = await fetch(
+        `/api/test-results?patient_id=${patientId}&test_type=RQ-PCR,RQ-PCR for BCR-ABL`
+      );
+      const testResult = await testResponse.json();
       
-      // Filter out results without bcr_abl_is value
-      const filteredTestData = (testData || []).filter((result: any) => result.bcr_abl_is != null);
-
-      if (testError) {
-        console.error('Test results fetch error:', testError);
+      if (!testResult.success) {
+        console.error('Test results fetch error:', testResult.error);
         // Don't throw, just log - test results are optional
+        setTestResults([]);
+      } else {
+        // Filter out results without bcr_abl_is value and sort by date
+        const filteredTestData = (testResult.data || [])
+          .filter((result: any) => result.bcr_abl_is != null)
+          .sort((a: any, b: any) => new Date(a.test_date).getTime() - new Date(b.test_date).getTime());
+        setTestResults(filteredTestData);
       }
-      
-      setTestResults(filteredTestData || []);
     } catch (err) {
       console.error('Error fetching patient data:', err);
       setError(`เกิดข้อผิดพลาดในการโหลดข้อมูล: ${err instanceof Error ? err.message : 'Unknown error'}`);

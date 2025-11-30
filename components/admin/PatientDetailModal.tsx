@@ -58,20 +58,19 @@ export default function PatientDetailModal({ patient, isOpen, onClose }: Patient
       setLoading(true);
 
       // Fetch test results
-      const { data: testData, error: testError } = await supabase
-        .from('test_results')
-        .select('*')
-        .eq('patient_id', patient.patient_id)
-        .in('test_type', ['RQ-PCR', 'RQ-PCR for BCR-ABL'])
-        .order('test_date', { ascending: true });
+      const response = await fetch(
+        `/api/test-results?patient_id=${patient.patient_id}&test_type=RQ-PCR,RQ-PCR for BCR-ABL`
+      );
+      const result = await response.json();
       
-      // Filter out results without bcr_abl_is value
-      const filteredTestData = (testData || []).filter((result: any) => result.bcr_abl_is != null);
-
-      if (testError) {
-        console.error('Test results fetch error:', testError);
+      if (!result.success) {
+        console.error('Test results fetch error:', result.error);
+        setTestResults([]);
+      } else {
+        // Filter out results without bcr_abl_is value
+        const filteredTestData = (result.data || []).filter((result: any) => result.bcr_abl_is != null);
+        setTestResults(filteredTestData);
       }
-      setTestResults(filteredTestData || []);
 
       // Load TKI medication info
       if (patient.current_tki) {

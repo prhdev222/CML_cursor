@@ -35,13 +35,11 @@ export default function AdminDoctorsPage() {
 
   const fetchDoctors = async () => {
     try {
-      const { data, error } = await (supabase
-        .from('doctors') as any)
-        .select('*')
-        .order('created_at', { ascending: false });
+      const response = await fetch('/api/doctors');
+      const result = await response.json();
 
-      if (error) throw error;
-      setDoctors(data || []);
+      if (!result.success) throw new Error(result.error);
+      setDoctors(result.data || []);
     } catch (err: any) {
       console.error('Error fetching doctors:', err);
       setError(err.message);
@@ -114,30 +112,34 @@ export default function AdminDoctorsPage() {
           updateData.password_hash = hash;
         }
 
-        const { error } = await (supabase
-          .from('doctors') as any)
-          .update(updateData)
-          .eq('id', editingDoctor.id);
-
-        if (error) throw error;
+        const updateResponse = await fetch(`/api/doctors/${editingDoctor.id}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(updateData),
+        });
+        const updateResult = await updateResponse.json();
+        if (!updateResult.success) throw new Error(updateResult.error);
       } else {
         // Create new doctor
-        const response = await fetch('/api/doctor/hash-password', {
+        const hashResponse = await fetch('/api/doctor/hash-password', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ password: formData.password }),
         });
-        const { hash } = await response.json();
+        const hashResult = await hashResponse.json();
+        const hash = hashResult.hash;
 
-        const { error } = await (supabase
-          .from('doctors') as any)
-          .insert({
+        const createResponse = await fetch('/api/doctors', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
             doctor_code: formData.doctor_code,
             name: formData.name,
             password_hash: hash,
-          });
-
-        if (error) throw error;
+          }),
+        });
+        const createResult = await createResponse.json();
+        if (!createResult.success) throw new Error(createResult.error);
       }
 
       handleCloseModal();
@@ -152,12 +154,12 @@ export default function AdminDoctorsPage() {
     if (!confirm('คุณแน่ใจหรือไม่ว่าต้องการลบ doctor นี้?')) return;
 
     try {
-      const { error } = await (supabase
-        .from('doctors') as any)
-        .delete()
-        .eq('id', id);
-
-      if (error) throw error;
+      const response = await fetch(`/api/doctors/${id}`, {
+        method: 'DELETE',
+      });
+      const result = await response.json();
+      
+      if (!result.success) throw new Error(result.error);
       fetchDoctors();
     } catch (err: any) {
       console.error('Error deleting doctor:', err);
@@ -167,12 +169,14 @@ export default function AdminDoctorsPage() {
 
   const handleToggleActive = async (doctor: Doctor) => {
     try {
-      const { error } = await (supabase
-        .from('doctors') as any)
-        .update({ is_active: !doctor.is_active })
-        .eq('id', doctor.id);
-
-      if (error) throw error;
+      const response = await fetch(`/api/doctors/${doctor.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ is_active: !doctor.is_active }),
+      });
+      const result = await response.json();
+      
+      if (!result.success) throw new Error(result.error);
       fetchDoctors();
     } catch (err: any) {
       console.error('Error toggling active status:', err);
