@@ -173,20 +173,11 @@ export default function DoctorPatientsPage() {
     try {
       setLoading(true);
       const [patientsRes, hospitalsRes] = await Promise.all([
-        (supabase
-          .from('patients') as any)
-          .select(`
-            *,
-            hospital:hospitals(*)
-          `)
-          .order('created_at', { ascending: false }),
-        (supabase
-          .from('hospitals') as any)
-          .select('*')
-          .order('name'),
+        fetch('/api/patients').then(res => res.json()),
+        supabase.from('hospitals').select('*').order('name'),
       ]);
 
-      if (patientsRes.error) throw patientsRes.error;
+      if (!patientsRes.success) throw new Error(patientsRes.error);
       if (hospitalsRes.error) throw hospitalsRes.error;
 
       setPatients(patientsRes.data || []);
@@ -328,14 +319,21 @@ export default function DoctorPatientsPage() {
       };
 
       if (editingPatient) {
-        const { error } = await (supabase
-          .from('patients') as any)
-          .update(submitData)
-          .eq('id', editingPatient.id);
-        if (error) throw error;
+        const response = await fetch(`/api/patients/${editingPatient.id}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(submitData),
+        });
+        const result = await response.json();
+        if (!result.success) throw new Error(result.error);
       } else {
-        const { error } = await (supabase.from('patients') as any).insert([submitData]);
-        if (error) throw error;
+        const response = await fetch('/api/patients', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(submitData),
+        });
+        const result = await response.json();
+        if (!result.success) throw new Error(result.error);
       }
 
       setShowPatientModal(false);
@@ -385,8 +383,13 @@ export default function DoctorPatientsPage() {
         status: status,
       };
 
-      const { error } = await (supabase.from('test_results') as any).insert(testResultData);
-      if (error) throw error;
+      const response = await fetch('/api/test-results', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(testResultData),
+      });
+      const result = await response.json();
+      if (!result.success) throw new Error(result.error);
 
       // Generate alerts
       try {
@@ -436,31 +439,42 @@ export default function DoctorPatientsPage() {
 
     try {
       // End current TKI record if exists
-      await (supabase
-        .from('tki_records') as any)
-        .update({ end_date: tkiFormData.start_date })
-        .eq('patient_id', selectedPatient.patient_id)
-        .is('end_date', null);
+      await fetch('/api/tki-records/update', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          filter: {
+            patient_id: selectedPatient.patient_id,
+            end_date_is_null: true,
+          },
+          update: { end_date: tkiFormData.start_date },
+        }),
+      });
 
       // Create new TKI record
-      const { error } = await (supabase.from('tki_records') as any).insert([
-        {
+      const tkiResponse = await fetch('/api/tki-records', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify([{
           patient_id: selectedPatient.patient_id,
           tki_name: tkiFormData.new_tki,
           start_date: tkiFormData.start_date,
           reason: tkiFormData.reason,
           mutation_test_result: tkiFormData.mutation_test_result || null,
           notes: tkiFormData.notes || null,
-        },
-      ]);
-
-      if (error) throw error;
+        }]),
+      });
+      const tkiResult = await tkiResponse.json();
+      if (!tkiResult.success) throw new Error(tkiResult.error);
 
       // Update patient's current TKI
-      await (supabase
-        .from('patients') as any)
-        .update({ current_tki: tkiFormData.new_tki })
-        .eq('patient_id', selectedPatient.patient_id);
+      const patientResponse = await fetch(`/api/patients/${selectedPatient.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ current_tki: tkiFormData.new_tki }),
+      });
+      const patientResult = await patientResponse.json();
+      if (!patientResult.success) throw new Error(patientResult.error);
 
       setShowTKIModal(false);
       fetchData();
@@ -489,34 +503,42 @@ export default function DoctorPatientsPage() {
     }
 
     try {
-      // Update the latest TKI record with mutation result
-      const { data: tkiRecords } = await (supabase
-        .from('tki_records') as any)
-        .select('*')
-        .eq('patient_id', selectedPatient.patient_id)
-        .order('start_date', { ascending: false })
-        .limit(1);
+      // Fetch the latest TKI record
+      const tkiResponse = await fetch(
+        `/api/tki-records?patient_id=${selectedPatient.patient_id}&limit=1`
+      );
+      const tkiResult = await tkiResponse.json();
+      
+      if (!tkiResult.success) throw new Error(tkiResult.error);
 
-      if (tkiRecords && tkiRecords.length > 0) {
-        await (supabase
-          .from('tki_records') as any)
-          .update({
+      if (tkiResult.data && tkiResult.data.length > 0) {
+        // Update existing TKI record
+        const updateResponse = await fetch(`/api/tki-records/${tkiResult.data[0].id}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
             mutation_test_result: mutationFormData.mutation_result,
             notes: mutationFormData.notes || null,
-          })
-          .eq('id', tkiRecords[0].id);
+          }),
+        });
+        const updateResult = await updateResponse.json();
+        if (!updateResult.success) throw new Error(updateResult.error);
       } else {
         // If no TKI record, create one
-        await (supabase.from('tki_records') as any).insert([
-          {
+        const createResponse = await fetch('/api/tki-records', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify([{
             patient_id: selectedPatient.patient_id,
             tki_name: selectedPatient.current_tki || 'imatinib',
             start_date: mutationFormData.test_date,
             reason: 'molecularFailure',
             mutation_test_result: mutationFormData.mutation_result,
             notes: mutationFormData.notes || null,
-          },
-        ]);
+          }]),
+        });
+        const createResult = await createResponse.json();
+        if (!createResult.success) throw new Error(createResult.error);
       }
 
       setShowMutationModal(false);

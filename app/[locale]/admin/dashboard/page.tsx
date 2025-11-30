@@ -34,37 +34,18 @@ export default function AdminDashboard() {
 
   const fetchStats = async () => {
     try {
-      const today = new Date();
-      const nextWeek = new Date(today);
-      nextWeek.setDate(today.getDate() + 7);
+      const response = await fetch('/api/stats');
+      const result = await response.json();
 
-      const [patientsRes, hospitalsRes, guidelinesRes, appointmentsRes, testsRes, alertsRes] = await Promise.all([
-        supabase.from('patients').select('id', { count: 'exact', head: true }),
-        supabase.from('hospitals').select('id', { count: 'exact', head: true }),
-        supabase.from('guidelines').select('id', { count: 'exact', head: true }),
-        supabase
-          .from('patients')
-          .select('id', { count: 'exact', head: true })
-          .not('next_appointment_date', 'is', null)
-          .gte('next_appointment_date', today.toISOString().split('T')[0])
-          .lte('next_appointment_date', nextWeek.toISOString().split('T')[0]),
-        supabase
-          .from('test_results')
-          .select('id', { count: 'exact', head: true })
-          .gte('test_date', new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]),
-        supabase
-          .from('alerts')
-          .select('id', { count: 'exact', head: true })
-          .eq('resolved', false),
-      ]);
+      if (!result.success) throw new Error(result.error);
 
       setStats({
-        patients: patientsRes.count || 0,
-        hospitals: hospitalsRes.count || 0,
-        guidelines: guidelinesRes.count || 0,
-        upcomingAppointments: appointmentsRes.count || 0,
-        recentTests: testsRes.count || 0,
-        alerts: alertsRes.count || 0,
+        patients: result.data.patients || 0,
+        hospitals: result.data.hospitals || 0,
+        guidelines: result.data.guidelines || 0,
+        upcomingAppointments: result.data.upcomingAppointments || 0,
+        recentTests: result.data.recentTests || 0,
+        alerts: result.data.alerts || 0,
       });
     } catch (error) {
       console.error('Error fetching stats:', error);

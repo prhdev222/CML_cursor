@@ -137,18 +137,13 @@ export default function AdminPatientsPage() {
 
   const fetchData = async () => {
     try {
+      const filterParam = filter ? `?filter=${filter}` : '';
       const [patientsRes, hospitalsRes] = await Promise.all([
-        supabase
-          .from('patients')
-          .select(`
-            *,
-            hospital:hospitals(*)
-          `)
-          .order('created_at', { ascending: false }),
+        fetch(`/api/patients${filterParam}`).then(res => res.json()),
         supabase.from('hospitals').select('*').order('name'),
       ]);
 
-      if (patientsRes.error) throw patientsRes.error;
+      if (!patientsRes.success) throw new Error(patientsRes.error);
       if (hospitalsRes.error) throw hospitalsRes.error;
 
       setPatients(patientsRes.data || []);
@@ -250,10 +245,14 @@ export default function AdminPatientsPage() {
     if (!confirm('คุณแน่ใจหรือไม่ว่าต้องการลบผู้ป่วยนี้?')) return;
 
     try {
-      const { error } = await supabase.from('patients').delete().eq('id', id);
-      if (error) throw error;
+      const response = await fetch(`/api/patients/${id}`, {
+        method: 'DELETE',
+      });
+      const result = await response.json();
+      
+      if (!result.success) throw new Error(result.error);
       fetchData();
-    } catch (error) {
+    } catch (error: any) {
       alert('เกิดข้อผิดพลาดในการลบ');
       console.error(error);
     }
@@ -301,15 +300,21 @@ export default function AdminPatientsPage() {
       };
 
       if (editingPatient) {
-        const { error } = await (supabase
-          .from('patients') as any)
-          .update(submitData)
-          .eq('id', editingPatient.id);
-        
-        if (error) throw error;
+        const response = await fetch(`/api/patients/${editingPatient.id}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(submitData),
+        });
+        const result = await response.json();
+        if (!result.success) throw new Error(result.error);
       } else {
-        const { error } = await (supabase.from('patients') as any).insert([submitData]);
-        if (error) throw error;
+        const response = await fetch('/api/patients', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(submitData),
+        });
+        const result = await response.json();
+        if (!result.success) throw new Error(result.error);
       }
       
       setIsModalOpen(false);
