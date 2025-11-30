@@ -22,6 +22,7 @@ interface Alert {
   color_name?: string;
   needs_mutation?: boolean;
   patient_name?: string;
+  is_overdue?: boolean;
 }
 
 interface Patient {
