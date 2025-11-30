@@ -67,8 +67,10 @@ export default function PatientDetailModal({ patient, isOpen, onClose }: Patient
         console.error('Test results fetch error:', result.error);
         setTestResults([]);
       } else {
-        // Filter out results without bcr_abl_is value
-        const filteredTestData = (result.data || []).filter((result: any) => result.bcr_abl_is != null);
+        // Filter out results without bcr_abl_is value and sort by date (ascending - old to new)
+        const filteredTestData = (result.data || [])
+          .filter((result: any) => result.bcr_abl_is != null)
+          .sort((a: any, b: any) => new Date(a.test_date).getTime() - new Date(b.test_date).getTime());
         setTestResults(filteredTestData);
       }
 

@@ -176,10 +176,9 @@ export default function PatientPortalPage() {
         // Don't throw, just log - test results are optional
         setTestResults([]);
       } else {
-        // Filter out results without bcr_abl_is value and sort by date
+        // Filter out results without bcr_abl_is value (already sorted by API)
         const filteredTestData = (testResult.data || [])
-          .filter((result: any) => result.bcr_abl_is != null)
-          .sort((a: any, b: any) => new Date(a.test_date).getTime() - new Date(b.test_date).getTime());
+          .filter((result: any) => result.bcr_abl_is != null);
         setTestResults(filteredTestData);
       }
     } catch (err) {

@@ -13,7 +13,7 @@ export async function GET(request: NextRequest) {
     let query = supabaseAdmin
       .from('test_results')
       .select('*')
-      .order('test_date', { ascending: false });
+      .order('test_date', { ascending: true }); // Sort ascending (old to new) for charts
 
     if (patientId) {
       query = query.eq('patient_id', patientId);
