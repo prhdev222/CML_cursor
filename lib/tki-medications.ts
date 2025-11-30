@@ -40,7 +40,7 @@ export async function getTKIMedications(): Promise<Map<string, TKIMedication>> {
 
     const medications = new Map<string, TKIMedication>();
     if (data) {
-      data.forEach((med) => {
+      (data as TKIMedication[]).forEach((med) => {
         medications.set(med.medication_key, med);
       });
     }
@@ -86,7 +86,7 @@ export async function getAllTKIMedications(): Promise<TKIMedication[]> {
       throw error;
     }
 
-    return data || [];
+    return (data as TKIMedication[]) || [];
   } catch (error) {
     console.error('Error fetching all TKI medications:', error);
     return [];
