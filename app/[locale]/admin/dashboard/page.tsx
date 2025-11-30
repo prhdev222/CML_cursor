@@ -12,7 +12,6 @@ interface DashboardStats {
   patients: number;
   hospitals: number;
   guidelines: number;
-  protocols: number;
   upcomingAppointments: number;
   recentTests: number;
   alerts: number;
@@ -23,7 +22,6 @@ export default function AdminDashboard() {
     patients: 0,
     hospitals: 0,
     guidelines: 0,
-    protocols: 0,
     upcomingAppointments: 0,
     recentTests: 0,
     alerts: 0,
@@ -40,11 +38,10 @@ export default function AdminDashboard() {
       const nextWeek = new Date(today);
       nextWeek.setDate(today.getDate() + 7);
 
-      const [patientsRes, hospitalsRes, guidelinesRes, protocolsRes, appointmentsRes, testsRes, alertsRes] = await Promise.all([
+      const [patientsRes, hospitalsRes, guidelinesRes, appointmentsRes, testsRes, alertsRes] = await Promise.all([
         supabase.from('patients').select('id', { count: 'exact', head: true }),
         supabase.from('hospitals').select('id', { count: 'exact', head: true }),
         supabase.from('guidelines').select('id', { count: 'exact', head: true }),
-        supabase.from('protocols').select('id', { count: 'exact', head: true }),
         supabase
           .from('patients')
           .select('id', { count: 'exact', head: true })
@@ -65,7 +62,6 @@ export default function AdminDashboard() {
         patients: patientsRes.count || 0,
         hospitals: hospitalsRes.count || 0,
         guidelines: guidelinesRes.count || 0,
-        protocols: protocolsRes.count || 0,
         upcomingAppointments: appointmentsRes.count || 0,
         recentTests: testsRes.count || 0,
         alerts: alertsRes.count || 0,
@@ -96,7 +92,7 @@ export default function AdminDashboard() {
       bgColor: 'bg-purple-50',
       borderColor: 'border-purple-200',
       textColor: 'text-purple-700',
-      href: '/admin/patients'
+      href: '/admin/patients?filter=appointments'
     },
     { 
       label: 'ผลตรวจล่าสุด', 
@@ -106,7 +102,7 @@ export default function AdminDashboard() {
       bgColor: 'bg-green-50',
       borderColor: 'border-green-200',
       textColor: 'text-green-700',
-      href: '/admin/monitoring'
+      href: '/admin/monitoring?filter=recent'
     },
     { 
       label: 'การแจ้งเตือน', 
@@ -116,7 +112,7 @@ export default function AdminDashboard() {
       bgColor: 'bg-red-50',
       borderColor: 'border-red-200',
       textColor: 'text-red-700',
-      href: '/admin/monitoring'
+      href: '/admin/alerts'
     },
     { 
       label: 'โรงพยาบาล', 
@@ -140,56 +136,6 @@ export default function AdminDashboard() {
     },
   ];
 
-  const quickActions = [
-    {
-      title: 'จัดการผู้ป่วย',
-      description: 'เพิ่ม แก้ไข หรือลบข้อมูลผู้ป่วย',
-      icon: Users,
-      href: '/admin/patients',
-      color: 'blue',
-      gradient: 'from-blue-500 to-cyan-500',
-    },
-    {
-      title: 'ติดตามผล',
-      description: 'ดูผลการตรวจและแจ้งเตือน',
-      icon: Activity,
-      href: '/admin/monitoring',
-      color: 'green',
-      gradient: 'from-green-500 to-emerald-500',
-    },
-    {
-      title: 'จัดการ TKI',
-      description: 'จัดการการเปลี่ยนยา TKI',
-      icon: Pill,
-      href: '/admin/tki',
-      color: 'purple',
-      gradient: 'from-purple-500 to-pink-500',
-    },
-    {
-      title: 'จัดการโรงพยาบาล',
-      description: 'เพิ่ม แก้ไข หรือลบโรงพยาบาล',
-      icon: Building2,
-      href: '/admin/hospitals',
-      color: 'indigo',
-      gradient: 'from-indigo-500 to-blue-500',
-    },
-    {
-      title: 'จัดการแนวทาง',
-      description: 'เพิ่มหรือแก้ไขแนวทางปฏิบัติ',
-      icon: BookOpen,
-      href: '/admin/guidelines',
-      color: 'emerald',
-      gradient: 'from-emerald-500 to-teal-500',
-    },
-    {
-      title: 'จัดการ Protocol',
-      description: 'แก้ไขเนื้อหา protocol การเปลี่ยนยาและเจาะเลือด',
-      icon: FileText,
-      href: '/admin/protocols',
-      color: 'orange',
-      gradient: 'from-orange-500 to-red-500',
-    },
-  ];
 
   return (
     <AdminLayout>
@@ -265,101 +211,6 @@ export default function AdminDashboard() {
           })}
           </div>
         </div>
-
-        {/* Quick Actions Section */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.3 }}
-        >
-          <h2 className="text-2xl font-bold text-gray-900 mb-4 flex items-center gap-2">
-            <Activity className="w-6 h-6 text-purple-600" />
-            เมนูหลัก
-          </h2>
-          <Card className="border-2 border-gray-200 shadow-lg">
-            <CardContent className="p-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {quickActions.map((action, index) => {
-                  const Icon = action.icon;
-                  return (
-                    <motion.div
-                      key={action.title}
-                      initial={{ opacity: 0, scale: 0.95 }}
-                      animate={{ opacity: 1, scale: 1 }}
-                      transition={{ delay: 0.4 + index * 0.05 }}
-                      whileHover={{ scale: 1.02, y: -2 }}
-                    >
-                      <Link
-                        href={action.href}
-                        className="block p-4 border-2 border-gray-200 rounded-xl hover:border-blue-300 hover:bg-blue-50 transition-all duration-300 group"
-                      >
-                        <div className="flex items-start gap-3">
-                          <div className={`p-2.5 rounded-lg bg-gradient-to-br ${action.gradient} shadow-md group-hover:shadow-lg transition-shadow flex-shrink-0`}>
-                            <Icon className="w-5 h-5 text-white" />
-                          </div>
-                          <div className="flex-1 min-w-0">
-                            <h3 className="font-semibold text-gray-900 text-base mb-1 group-hover:text-blue-600 transition-colors">
-                              {action.title}
-                            </h3>
-                            <p className="text-xs text-gray-600 leading-relaxed">
-                              {action.description}
-                            </p>
-                          </div>
-                          <ArrowRight className="w-4 h-4 text-gray-400 group-hover:text-blue-600 group-hover:translate-x-1 transition-all flex-shrink-0 mt-1" />
-                        </div>
-                      </Link>
-                    </motion.div>
-                  );
-                })}
-              </div>
-            </CardContent>
-          </Card>
-        </motion.div>
-
-        {/* Info Section */}
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ delay: 0.6 }}
-        >
-          <h2 className="text-2xl font-bold text-gray-900 mb-4 flex items-center gap-2">
-            <AlertCircle className="w-6 h-6 text-green-600" />
-            ข้อมูลสำคัญ
-          </h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <Card className="border-2 border-blue-200 bg-gradient-to-br from-blue-50 to-blue-100">
-            <CardContent className="p-5">
-              <div className="flex items-start gap-3">
-                <div className="p-2.5 bg-blue-600 rounded-lg shadow-md flex-shrink-0">
-                  <AlertCircle className="w-5 h-5 text-white" />
-                </div>
-                <div>
-                  <h3 className="font-semibold text-gray-900 mb-2 text-base">ความปลอดภัยข้อมูล</h3>
-                  <p className="text-xs text-gray-700 leading-relaxed">
-                    ระบบนี้ได้รับการออกแบบให้สอดคล้องกับ PDPA ข้อมูลผู้ป่วยสามารถเข้าถึงได้เฉพาะแพทย์ที่ผ่านการยืนยันตัวตนเท่านั้น
-                  </p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card className="border-2 border-green-200 bg-gradient-to-br from-green-50 to-green-100">
-            <CardContent className="p-5">
-              <div className="flex items-start gap-3">
-                <div className="p-2.5 bg-green-600 rounded-lg shadow-md flex-shrink-0">
-                  <Users className="w-5 h-5 text-white" />
-                </div>
-                <div>
-                  <h3 className="font-semibold text-gray-900 mb-2 text-base">การเข้าถึง</h3>
-                  <p className="text-xs text-gray-700 leading-relaxed">
-                    ผู้ป่วยสามารถเข้าถึงข้อมูลของตัวเองผ่าน Patient Portal โดยใช้รหัสผู้ป่วยและรหัสผ่านที่ตั้งไว้
-                  </p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-          </div>
-        </motion.div>
       </div>
     </AdminLayout>
   );

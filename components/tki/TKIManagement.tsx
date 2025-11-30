@@ -99,7 +99,7 @@ export default function TKIManagement() {
                     </p>
                   )}
                   <p className="text-sm text-gray-500 mt-2">
-                    Reason: {t(`tki.${record.reason}`)}
+                    Reason: {record.reason === 'molecularFailure' ? 'Molecular Failure' : record.reason === 'intolerance' ? 'Intolerance' : record.reason}
                   </p>
                 </div>
                 {!record.end_date && (

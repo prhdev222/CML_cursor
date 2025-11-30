@@ -2,49 +2,54 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
-import { isAdminLoggedIn, logoutAdmin } from '@/lib/auth';
+import { isDoctorLoggedIn, logoutDoctor, getDoctorSession } from '@/lib/doctor-auth';
 import Link from 'next/link';
 import { 
   LayoutDashboard, 
   Users, 
-  BookOpen, 
-  Building2, 
-  FileText, 
   LogOut,
   Menu,
   X,
-  Activity,
-  Pill,
-  GraduationCap,
   Bell,
-  FlaskConical,
+  Pill,
+  TestTube,
+  Search,
+  UserPlus,
+  FileEdit,
+  BookOpen,
+  FileText,
   Sparkles
 } from 'lucide-react';
 import { motion } from 'framer-motion';
 
-interface AdminLayoutProps {
+interface DoctorLayoutProps {
   children: React.ReactNode;
 }
 
-export default function AdminLayout({ children }: AdminLayoutProps) {
+export default function DoctorLayout({ children }: DoctorLayoutProps) {
   const router = useRouter();
   const pathname = usePathname();
   const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [doctorName, setDoctorName] = useState('');
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [rightMenuOpen, setRightMenuOpen] = useState(false);
 
   useEffect(() => {
-    if (!isAdminLoggedIn()) {
-      router.push('/admin/login');
+    if (!isDoctorLoggedIn()) {
+      router.push('/doctor/login');
     } else {
       setIsAuthenticated(true);
+      const session = getDoctorSession();
+      if (session) {
+        setDoctorName(session.name);
+      }
     }
   }, [router]);
 
   const handleLogout = () => {
-    logoutAdmin();
-    router.push('/admin/login');
+    logoutDoctor();
+    router.push('/doctor/login');
   };
 
   if (!isAuthenticated) {
@@ -52,17 +57,9 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
   }
 
   const menuItems = [
-    { href: '/admin/dashboard', label: 'Dashboard', icon: LayoutDashboard },
-    { href: '/admin/patients', label: 'จัดการผู้ป่วย', icon: Users },
-    { href: '/admin/doctors', label: 'จัดการ Doctors', icon: Users },
-    { href: '/admin/monitoring', label: 'ติดตามผล', icon: Activity },
-    { href: '/admin/alerts', label: 'การแจ้งเตือน', icon: Bell },
-    { href: '/admin/tki', label: 'จัดการ TKI', icon: FlaskConical },
-    { href: '/admin/medications', label: 'จัดการยา', icon: Pill },
-    { href: '/admin/hospitals', label: 'จัดการโรงพยาบาล', icon: Building2 },
-    { href: '/admin/guidelines', label: 'จัดการแนวทาง', icon: BookOpen },
-    { href: '/admin/research', label: 'จัดการงานวิจัย', icon: FileText },
-    { href: '/admin/patient-education', label: 'เนื้อหาให้ความรู้ผู้ป่วย', icon: GraduationCap },
+    { href: '/doctor/dashboard', label: 'Dashboard', icon: LayoutDashboard },
+    { href: '/doctor/patients', label: 'จัดการผู้ป่วย', icon: Users },
+    { href: '/doctor/alerts', label: 'แจ้งเตือน', icon: Bell },
   ];
 
   const rightMenuItems = [
@@ -103,7 +100,7 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
             <Menu className="w-6 h-6 text-gray-900" />
           </button>
           <div className="flex items-center gap-2 flex-shrink-0">
-            <Sparkles className="w-5 h-5 text-blue-600 flex-shrink-0" />
+            <Sparkles className="w-5 h-5 text-green-600 flex-shrink-0" />
             <h1 className="text-lg font-bold text-gray-900 whitespace-nowrap">
               ระบบจัดการผู้ป่วย CML
             </h1>
@@ -162,9 +159,10 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
       {/* Sidebar - Desktop */}
       <aside className={`hidden md:flex fixed left-0 top-0 h-full w-64 bg-white shadow-lg z-40 flex-col transition-transform duration-300 ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}`}>
         <div className="p-6 border-b border-gray-200 flex-shrink-0">
-          <h1 className="text-xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
-            Admin Panel
+          <h1 className="text-xl font-bold bg-gradient-to-r from-green-600 to-teal-600 bg-clip-text text-transparent">
+            Doctor Panel
           </h1>
+          <p className="text-sm text-gray-600 mt-1">{doctorName}</p>
         </div>
         <nav className="p-4 space-y-2 flex-1 overflow-y-auto">
           {menuItems.map((item) => {
@@ -176,7 +174,7 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
                 href={item.href}
                 className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-all ${
                   isActive
-                    ? 'bg-blue-50 text-blue-700 font-semibold'
+                    ? 'bg-green-50 text-green-700 font-semibold'
                     : 'text-gray-700 hover:bg-gray-50'
                 }`}
               >
@@ -207,9 +205,12 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
         >
           <div className="p-6 border-b border-gray-200 flex-shrink-0">
             <div className="flex items-center justify-between">
-              <h1 className="text-xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
-                Admin Panel
-              </h1>
+              <div>
+                <h1 className="text-xl font-bold bg-gradient-to-r from-green-600 to-teal-600 bg-clip-text text-transparent">
+                  Doctor Panel
+                </h1>
+                <p className="text-sm text-gray-600 mt-1">{doctorName}</p>
+              </div>
               <button
                 onClick={() => setMobileMenuOpen(false)}
                 className="p-1 text-gray-500 hover:text-gray-700"
@@ -229,7 +230,7 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
                   onClick={() => setMobileMenuOpen(false)}
                   className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-all ${
                     isActive
-                      ? 'bg-blue-50 text-blue-700 font-semibold'
+                      ? 'bg-green-50 text-green-700 font-semibold'
                       : 'text-gray-700 hover:bg-gray-50'
                   }`}
                 >

@@ -119,8 +119,8 @@ export default function TKISwitchForm() {
           onChange={(e) => setFormData({ ...formData, reason: e.target.value })}
           className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
         >
-          <option value="molecularFailure">{t('tki.molecularFailure')}</option>
-          <option value="intolerance">{t('tki.intolerance')}</option>
+          <option value="molecularFailure">Molecular Failure</option>
+          <option value="intolerance">Intolerance</option>
         </select>
       </div>
 

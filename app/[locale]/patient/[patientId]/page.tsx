@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 import { isPatientLoggedIn } from '@/lib/patient-auth';
+import { getTKIMedication } from '@/lib/tki-medications';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
 import { 
   User, 
@@ -50,29 +51,6 @@ interface TKIInfo {
   monitoring: string[];
 }
 
-const TKI_INFO: Record<string, TKIInfo> = {
-  imatinib: {
-    name: 'Imatinib (Gleevec)',
-    sideEffects: ['คลื่นไส้', 'ปวดกล้ามเนื้อ', 'บวมน้ำ', 'ผื่น'],
-    monitoring: ['CBC ทุก 15 วัน', 'RQ-PCR ทุก 3 เดือน', 'ตรวจตับ'],
-  },
-  nilotinib: {
-    name: 'Nilotinib (Tasigna)',
-    sideEffects: ['QT prolongation', 'ตับอักเสบ', 'ไขมันในเลือดสูง', 'ผื่น'],
-    monitoring: ['ECG ก่อนเริ่มยา', 'CBC ทุก 15 วัน', 'RQ-PCR ทุก 3 เดือน', 'ตรวจตับและไขมัน'],
-  },
-  dasatinib: {
-    name: 'Dasatinib (Sprycel)',
-    sideEffects: ['น้ำในเยื่อหุ้มปอด', 'เลือดออก', 'ปวดหัว', 'คลื่นไส้'],
-    monitoring: ['CBC ทุก 15 วัน', 'RQ-PCR ทุก 3 เดือน', 'CXR ถ้ามีอาการหายใจลำบาก'],
-  },
-  ponatinib: {
-    name: 'Ponatinib (Iclusig)',
-    sideEffects: ['ลิ่มเลือดอุดตัน', 'ความดันโลหิตสูง', 'ตับอักเสบ', 'ตับอ่อนอักเสบ'],
-    monitoring: ['CBC ทุก 15 วัน', 'RQ-PCR ทุก 3 เดือน', 'ตรวจความดันโลหิต', 'ตรวจหัวใจ'],
-  },
-};
-
 // Warning and failure thresholds (BCR-ABL1 IS %)
 const WARNING_THRESHOLD = 0.1; // MMR threshold
 const FAILURE_THRESHOLD = 1.0; // CCyR threshold
@@ -88,6 +66,7 @@ export default function PatientPortalPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [checkingAuth, setCheckingAuth] = useState(true);
+  const [tkiInfo, setTkiInfo] = useState<TKIInfo | null>(null);
 
   useEffect(() => {
     if (patientId) {
@@ -171,20 +150,45 @@ export default function PatientPortalPage() {
       
       setPatient(transformedPatient);
 
+      // Load TKI medication info if patient has current_tki
+      if (transformedPatient.current_tki) {
+        try {
+          const medication = await getTKIMedication(transformedPatient.current_tki);
+          if (medication) {
+            setTkiInfo({
+              name: medication.name_en,
+              sideEffects: medication.side_effects,
+              monitoring: medication.monitoring,
+            });
+          } else {
+            // Fallback to null if medication not found
+            setTkiInfo(null);
+          }
+        } catch (medError) {
+          console.error('Error loading medication:', medError);
+          setTkiInfo(null);
+        }
+      } else {
+        setTkiInfo(null);
+      }
+
       // Fetch test results
       const { data: testData, error: testError } = await (supabase
         .from('test_results') as any)
         .select('*')
         .eq('patient_id', patientId)
-        .eq('test_type', 'RQ-PCR')
+        .in('test_type', ['RQ-PCR', 'RQ-PCR for BCR-ABL'])
         .order('test_date', { ascending: true });
+      
+      // Filter out results without bcr_abl_is value
+      const filteredTestData = (testData || []).filter((result: any) => result.bcr_abl_is != null);
 
       if (testError) {
         console.error('Test results fetch error:', testError);
         // Don't throw, just log - test results are optional
       }
       
-      setTestResults(testData || []);
+      setTestResults(filteredTestData || []);
     } catch (err) {
       console.error('Error fetching patient data:', err);
       setError(`เกิดข้อผิดพลาดในการโหลดข้อมูล: ${err instanceof Error ? err.message : 'Unknown error'}`);
@@ -213,14 +217,107 @@ export default function PatientPortalPage() {
     return phases[phase] || phase;
   };
 
-  const chartData = testResults.map((result) => ({
-    date: new Date(result.test_date).toLocaleDateString('th-TH', { month: 'short', year: 'numeric' }),
-    value: result.bcr_abl_is,
-    status: result.status,
-  }));
+  const getCMLColorName = (value: number, months: number): string => {
+    if (value > 10) {
+      if (months <= 3) return 'YELLOW';
+      return 'RED';
+    } else if (value > 1 && value <= 10) {
+      if (months >= 12) return 'RED';
+      return 'GREEN';
+    } else if (value > 0.1 && value <= 1) {
+      if (months >= 12) return 'ORANGE';
+      return 'LIGHT GREEN';
+    } else {
+      return 'GREEN';
+    }
+  };
 
-  const currentTKI = patient?.current_tki || '';
-  const tkiInfo = currentTKI ? TKI_INFO[currentTKI] : null;
+  // ELN 2020 Response Status (Optimal, Warning, Failure)
+  // ประเมินตาม milestone ที่ผ่านมาแล้วเท่านั้น
+  const getELNResponseStatus = (value: number, months: number): { status: 'optimal' | 'warning' | 'failure' | 'not-assessed', label: string } => {
+    // ก่อน 3 เดือน: ยังไม่ประเมิน milestone
+    if (months < 3) {
+      return { status: 'not-assessed', label: 'Not assessed' };
+    }
+    
+    // ที่ 3 เดือน: ประเมิน milestone 3 เดือน (≤10% optimal, >10% failure)
+    if (months >= 3 && months < 6) {
+      if (value <= 10) {
+        return { status: 'optimal', label: 'Optimal' };
+      } else {
+        return { status: 'failure', label: 'Failure' };
+      }
+    }
+    
+    // ที่ 6 เดือน: ประเมิน milestone 6 เดือน (≤1% optimal, >1% but ≤10% warning, >10% failure)
+    if (months >= 6 && months < 12) {
+      if (value <= 1) {
+        return { status: 'optimal', label: 'Optimal' };
+      } else if (value > 1 && value <= 10) {
+        return { status: 'warning', label: 'Warning' };
+      } else {
+        return { status: 'failure', label: 'Failure' };
+      }
+    }
+    
+    // ที่ 12 เดือนขึ้นไป: ประเมิน milestone 12 เดือน (≤0.1% optimal, >0.1% but ≤1% warning, >1% failure)
+    if (months >= 12) {
+      if (value <= 0.1) {
+        return { status: 'optimal', label: 'Optimal' };
+      } else if (value > 0.1 && value <= 1) {
+        return { status: 'warning', label: 'Warning' };
+      } else {
+        return { status: 'failure', label: 'Failure' };
+      }
+    }
+    
+    // Default
+    return { status: 'not-assessed', label: 'Not assessed' };
+  };
+
+  // Calculate months since diagnosis for each test
+  const getMonthsSinceDiagnosis = (testDate: string, diagnosisDate: string) => {
+    const test = new Date(testDate);
+    const diagnosis = new Date(diagnosisDate);
+    const diffTime = test.getTime() - diagnosis.getTime();
+    const diffMonths = Math.round(diffTime / (1000 * 60 * 60 * 24 * 30));
+    return diffMonths;
+  };
+
+  // Get color based on CML guidelines
+  const getCMLColor = (value: number, months: number): string => {
+    if (value > 10) {
+      // >10%
+      if (months <= 3) return '#fbbf24'; // YELLOW
+      return '#ef4444'; // RED (6 or 12 months)
+    } else if (value > 1 && value <= 10) {
+      // >1%-10%
+      if (months >= 12) return '#ef4444'; // RED at 12 months
+      return '#10b981'; // GREEN at 3 or 6 months
+    } else if (value > 0.1 && value <= 1) {
+      // >0.1%-1%
+      if (months >= 12) return '#f97316'; // ORANGE at 12 months
+      return '#86efac'; // LIGHT GREEN at 3 or 6 months
+    } else {
+      // ≤0.1%
+      return '#10b981'; // GREEN
+    }
+  };
+
+  const chartData = testResults.map((result) => {
+    const months = patient ? getMonthsSinceDiagnosis(result.test_date, patient.diagnosis_date) : 0;
+    const color = getCMLColor(result.bcr_abl_is || 0, months);
+    const elnStatus = patient ? getELNResponseStatus(result.bcr_abl_is || 0, months) : { status: 'optimal' as const, label: 'Optimal' };
+    return {
+      date: new Date(result.test_date).toLocaleDateString('th-TH', { month: 'short', year: 'numeric' }),
+      value: result.bcr_abl_is,
+      status: result.status,
+      color: color,
+      months: months,
+      elnStatus: elnStatus.status,
+      elnLabel: elnStatus.label,
+    };
+  });
 
   if (checkingAuth || loading) {
     return (
@@ -288,31 +385,31 @@ export default function PatientPortalPage() {
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div>
-                  <p className="text-sm text-gray-600">ชื่อ</p>
-                  <p className="text-lg font-semibold">{patient.name}</p>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                <div className="break-words">
+                  <p className="text-sm text-gray-600 mb-1">ชื่อ</p>
+                  <p className="text-lg font-semibold break-words">{patient.name}</p>
                 </div>
-                <div>
-                  <p className="text-sm text-gray-600">อายุ</p>
+                <div className="break-words">
+                  <p className="text-sm text-gray-600 mb-1">อายุ</p>
                   <p className="text-lg font-semibold">{patient.age} ปี</p>
                 </div>
-                <div>
-                  <p className="text-sm text-gray-600">เพศ</p>
+                <div className="break-words">
+                  <p className="text-sm text-gray-600 mb-1">เพศ</p>
                   <p className="text-lg font-semibold">{patient.gender === 'male' ? 'ชาย' : 'หญิง'}</p>
                 </div>
-                <div>
-                  <p className="text-sm text-gray-600">โรงพยาบาล</p>
-                  <p className="text-lg font-semibold">{patient.hospital?.name || '-'}</p>
+                <div className="break-words">
+                  <p className="text-sm text-gray-600 mb-1">โรงพยาบาล</p>
+                  <p className="text-lg font-semibold break-words">{patient.hospital?.name || '-'}</p>
                 </div>
-                <div>
-                  <p className="text-sm text-gray-600">วันที่วินิจฉัย</p>
+                <div className="break-words">
+                  <p className="text-sm text-gray-600 mb-1">วันที่วินิจฉัย</p>
                   <p className="text-lg font-semibold">
                     {new Date(patient.diagnosis_date).toLocaleDateString('th-TH')}
                   </p>
                 </div>
-                <div>
-                  <p className="text-sm text-gray-600">ระยะโรค</p>
+                <div className="break-words">
+                  <p className="text-sm text-gray-600 mb-1">ระยะโรค</p>
                   <p className="text-lg font-semibold">{getPhaseLabel(patient.phase)}</p>
                 </div>
               </div>
@@ -378,15 +475,29 @@ export default function PatientPortalPage() {
               <div className="space-y-4">
                 {latestTest ? (
                   <>
-                    <div className="bg-blue-50 p-4 rounded-lg">
-                      <p className="text-sm text-gray-600">ค่าล่าสุด</p>
-                      <p className="text-2xl font-bold text-blue-600">
-                        {latestTest.bcr_abl_is?.toFixed(4) || 'N/A'}%
-                      </p>
-                      <p className="text-xs text-gray-500 mt-1">
-                        วันที่: {new Date(latestTest.test_date).toLocaleDateString('th-TH')}
-                      </p>
-                    </div>
+                    {(() => {
+                      const latestMonths = patient ? getMonthsSinceDiagnosis(latestTest.test_date, patient.diagnosis_date) : 0;
+                      const latestColor = getCMLColor(latestTest.bcr_abl_is || 0, latestMonths);
+                      const colorName = getCMLColorName(latestTest.bcr_abl_is || 0, latestMonths);
+                      const elnStatus = patient ? getELNResponseStatus(latestTest.bcr_abl_is || 0, latestMonths) : { status: 'optimal' as const, label: 'Optimal' };
+                      return (
+                        <div className={`p-4 rounded-lg border-2`} style={{ 
+                          backgroundColor: latestColor + '20', 
+                          borderColor: latestColor 
+                        }}>
+                          <p className="text-sm text-gray-600">ค่าล่าสุด ({latestMonths} เดือน)</p>
+                          <p className="text-2xl font-bold" style={{ color: latestColor }}>
+                            {latestTest.bcr_abl_is?.toFixed(4) || 'N/A'}%
+                          </p>
+                          <p className="text-xs font-semibold mt-1" style={{ color: latestColor }}>
+                            สถานะ: {colorName}{elnStatus.status !== 'not-assessed' ? ` (${elnStatus.label})` : ''}
+                          </p>
+                          <p className="text-xs text-gray-500 mt-1">
+                            วันที่: {new Date(latestTest.test_date).toLocaleDateString('th-TH')}
+                          </p>
+                        </div>
+                      );
+                    })()}
                     
                     {testResults.length > 0 ? (
                       <>
@@ -400,42 +511,93 @@ export default function PatientPortalPage() {
                                 domain={[0, 'auto']}
                                 label={{ value: 'BCR-ABL1 IS (%)', angle: -90, position: 'insideLeft' }}
                               />
-                              <Tooltip />
+                              <Tooltip 
+                                formatter={(value: any, name: string, props: any) => {
+                                  const months = props.payload.months;
+                                  const colorName = getCMLColorName(props.payload.value, months);
+                                  const elnLabel = props.payload.elnLabel || '';
+                                  const elnStatus = props.payload.elnStatus || '';
+                                  const elnText = elnStatus !== 'not-assessed' ? `, ${elnLabel}` : '';
+                                  return [
+                                    `${value?.toFixed(4)}% (${months} เดือน, ${colorName}${elnText})`,
+                                    'BCR-ABL1 IS (%)'
+                                  ];
+                                }}
+                              />
                               <Legend />
                               <ReferenceLine 
-                                y={WARNING_THRESHOLD} 
-                                stroke="orange" 
+                                y={0.1} 
+                                stroke="#86efac" 
                                 strokeDasharray="5 5"
+                                strokeWidth={1}
                                 label={{ value: 'MMR (0.1%)', position: 'right' }}
                               />
                               <ReferenceLine 
-                                y={FAILURE_THRESHOLD} 
-                                stroke="red" 
+                                y={1.0} 
+                                stroke="#f97316" 
                                 strokeDasharray="5 5"
-                                label={{ value: 'CCyR (1.0%)', position: 'right' }}
+                                strokeWidth={1}
+                                label={{ value: '1%', position: 'right' }}
+                              />
+                              <ReferenceLine 
+                                y={10.0} 
+                                stroke="#fbbf24" 
+                                strokeDasharray="5 5"
+                                strokeWidth={1}
+                                label={{ value: '10%', position: 'right' }}
                               />
                               <Line 
                                 type="monotone" 
                                 dataKey="value" 
                                 stroke="#3b82f6" 
                                 strokeWidth={2}
-                                dot={{ r: 6 }}
+                                dot={(props: any) => {
+                                  const { cx, cy, payload } = props;
+                                  return (
+                                    <circle 
+                                      cx={cx} 
+                                      cy={cy} 
+                                      r={8} 
+                                      fill={payload.color} 
+                                      stroke="#fff" 
+                                      strokeWidth={2}
+                                    />
+                                  );
+                                }}
+                                activeDot={{ r: 10 }}
                                 name="BCR-ABL1 IS (%)"
                               />
                             </LineChart>
                           </ResponsiveContainer>
                         </div>
 
-                        <div className="bg-yellow-50 border-l-4 border-yellow-400 p-4 rounded">
+                        <div className="bg-blue-50 border-l-4 border-blue-400 p-4 rounded">
                           <div className="flex items-start gap-2">
-                            <AlertTriangle className="w-5 h-5 text-yellow-600 mt-0.5" />
+                            <AlertTriangle className="w-5 h-5 text-blue-600 mt-0.5" />
                             <div>
-                              <h4 className="font-semibold text-yellow-900 mb-1">คำอธิบายกราฟ</h4>
-                              <ul className="text-sm text-yellow-800 space-y-1">
-                                <li>• <strong>เส้นสีส้ม:</strong> ค่า MMR (0.1%) - ค่านี้ควรระวัง หากเกินอาจต้องพิจารณาเปลี่ยนยา</li>
-                                <li>• <strong>เส้นสีแดง:</strong> ค่า CCyR (1.0%) - หากเกินค่านี้จำเป็นต้องเปลี่ยนยา</li>
-                                <li>• <strong>เส้นสีน้ำเงิน:</strong> ค่าจริงที่วัดได้</li>
-                              </ul>
+                              <h4 className="font-semibold text-blue-900 mb-2">คำอธิบายสีตามเกณฑ์ CML</h4>
+                              <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-sm text-blue-800">
+                                <div className="flex items-center gap-2">
+                                  <div className="w-4 h-4 rounded-full bg-green-500 border-2 border-white"></div>
+                                  <span><strong>GREEN:</strong> ≤0.1% หรือ {'>'}0.1%-1% ที่ 3-6 เดือน</span>
+                                </div>
+                                <div className="flex items-center gap-2">
+                                  <div className="w-4 h-4 rounded-full bg-lime-300 border-2 border-white"></div>
+                                  <span><strong>LIGHT GREEN:</strong> {'>'}0.1%-1% ที่ 3-6 เดือน</span>
+                                </div>
+                                <div className="flex items-center gap-2">
+                                  <div className="w-4 h-4 rounded-full bg-yellow-400 border-2 border-white"></div>
+                                  <span><strong>YELLOW:</strong> {'>'}10% ที่ 3 เดือน</span>
+                                </div>
+                                <div className="flex items-center gap-2">
+                                  <div className="w-4 h-4 rounded-full bg-orange-500 border-2 border-white"></div>
+                                  <span><strong>ORANGE:</strong> {'>'}0.1%-1% ที่ 12 เดือน</span>
+                                </div>
+                                <div className="flex items-center gap-2">
+                                  <div className="w-4 h-4 rounded-full bg-red-500 border-2 border-white"></div>
+                                  <span><strong>RED:</strong> {'>'}10% ที่ 6-12 เดือน หรือ {'>'}1%-10% ที่ 12 เดือน</span>
+                                </div>
+                              </div>
                             </div>
                           </div>
                         </div>
