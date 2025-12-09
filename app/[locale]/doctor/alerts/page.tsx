@@ -1,7 +1,6 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { supabase } from '@/lib/supabase';
 import DoctorLayout from '@/components/doctor/DoctorLayout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
 import Button from '@/components/ui/Button';
@@ -38,14 +37,15 @@ export default function DoctorAlertsPage() {
 
   const fetchPatients = async () => {
     try {
-      const { data, error } = await (supabase
-        .from('patients') as any)
-        .select('patient_id, name, diagnosis_date');
+      const res = await fetch('/api/patients', { cache: 'no-store' });
+      const json = await res.json();
 
-      if (error) throw error;
+      if (!json.success) {
+        throw new Error(json.error || 'Failed to fetch patients');
+      }
 
       const patientsMap = new Map<string, Patient>();
-      (data || []).forEach((p: any) => {
+      (json.data || []).forEach((p: any) => {
         patientsMap.set(p.patient_id, {
           patient_id: p.patient_id,
           name: p.name,
@@ -62,29 +62,23 @@ export default function DoctorAlertsPage() {
   const fetchAlerts = async () => {
     try {
       setLoading(true);
-      const fourMonthsAgo = new Date();
-      fourMonthsAgo.setMonth(fourMonthsAgo.getMonth() - 4);
 
-      let query = (supabase
-        .from('alerts') as any)
-        .select('*')
-        .gte('created_at', fourMonthsAgo.toISOString())
-        .order('created_at', { ascending: false });
-
-      if (filter === 'unresolved') {
-        query = query.eq('resolved', false);
-      } else if (filter === 'mutation') {
-        query = query.eq('alert_type', 'mutation_test_needed').eq('resolved', false);
-      } else if (filter === 'tki') {
-        query = query.eq('alert_type', 'tki_switch_recommended').eq('resolved', false);
+      const params = new URLSearchParams();
+      if (filter === 'unresolved' || filter === 'mutation' || filter === 'tki') {
+        params.set('resolved', 'false');
       }
 
-      const { data: alertsData, error } = await query;
+      const res = await fetch(`/api/alerts${params.toString() ? `?${params.toString()}` : ''}`, {
+        cache: 'no-store',
+      });
+      const json = await res.json();
 
-      if (error) throw error;
+      if (!json.success) {
+        throw new Error(json.error || 'Failed to fetch alerts');
+      }
 
       // Add patient names
-      const alertsWithNames = (alertsData || []).map((alert: any) => ({
+      const alertsWithNames = (json.data || []).map((alert: any) => ({
         ...alert,
         patient_name: patients.get(alert.patient_id)?.name || 'Unknown',
       }));
@@ -99,12 +93,16 @@ export default function DoctorAlertsPage() {
 
   const handleResolve = async (alertId: string) => {
     try {
-      const { error } = await (supabase
-        .from('alerts') as any)
-        .update({ resolved: true })
-        .eq('id', alertId);
+      const res = await fetch(`/api/alerts/${alertId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ resolved: true }),
+      });
+      const json = await res.json();
 
-      if (error) throw error;
+      if (!json.success) {
+        throw new Error(json.error || 'Failed to resolve alert');
+      }
       fetchAlerts();
     } catch (error) {
       console.error('Error resolving alert:', error);
