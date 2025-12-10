@@ -1,7 +1,6 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { supabase } from '@/lib/supabase';
 import DoctorLayout from '@/components/doctor/DoctorLayout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
 import Button from '@/components/ui/Button';
@@ -45,29 +44,28 @@ export default function DoctorDashboard() {
     try {
       setLoading(true);
 
-      // Fetch patients count
-      const { count: patientsCount } = await (supabase
-        .from('patients') as any)
-        .select('*', { count: 'exact', head: true });
+      // Fetch patients
+      const patientsRes = await fetch('/api/patients', { cache: 'no-store' });
+      const patientsJson = await patientsRes.json();
+      
+      if (!patientsJson.success) {
+        throw new Error(patientsJson.error || 'Failed to fetch patients');
+      }
+
+      const patientsData = patientsJson.data || [];
+      const patientsCount = patientsData.length;
+      const patientsMap = new Map(patientsData.map((p: any) => [p.patient_id, p.name]));
 
       // Fetch active alerts
-      const { data: alertsData } = await (supabase
-        .from('alerts') as any)
-        .select('*')
-        .eq('resolved', false)
-        .order('created_at', { ascending: false })
-        .limit(10);
+      const alertsRes = await fetch('/api/alerts?resolved=false', { cache: 'no-store' });
+      const alertsJson = await alertsRes.json();
+      
+      if (!alertsJson.success) {
+        throw new Error(alertsJson.error || 'Failed to fetch alerts');
+      }
 
-      // Get patient names for alerts
-      const patientIds = [...new Set((alertsData || []).map((a: any) => a.patient_id))];
-      const { data: patientsData } = await (supabase
-        .from('patients') as any)
-        .select('patient_id, name')
-        .in('patient_id', patientIds);
-
-      const patientsMap = new Map((patientsData || []).map((p: any) => [p.patient_id, p.name]));
-
-      const alertsWithNames = (alertsData || []).map((alert: any) => ({
+      const alertsData = alertsJson.data || [];
+      const alertsWithNames = alertsData.map((alert: any) => ({
         ...alert,
         patient_name: patientsMap.get(alert.patient_id) || 'Unknown',
       }));
@@ -83,7 +81,7 @@ export default function DoctorDashboard() {
       );
 
       setStats({
-        totalPatients: patientsCount || 0,
+        totalPatients: patientsCount,
         activeAlerts: alertsWithNames.length,
         mutationTestsNeeded: mutationAlerts.length,
         tkiSwitchNeeded: tkiAlerts.length,
