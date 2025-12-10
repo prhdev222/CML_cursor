@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { supabase } from '@/lib/supabase';
 import { isPatientLoggedIn } from '@/lib/patient-auth';
 import { getTKIMedication } from '@/lib/tki-medications';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
@@ -83,20 +82,19 @@ export default function PatientPortalPage() {
 
   const checkPatientPassword = async () => {
     try {
-      const { data, error } = await (supabase
-        .from('patients') as any)
-        .select('password_hash')
-        .eq('patient_id', patientId)
-        .single();
+      const res = await fetch(`/api/patient/check-password?patient_id=${patientId}`, {
+        cache: 'no-store',
+      });
+      const json = await res.json();
 
-      if (error || !data) {
-        setError('ไม่พบข้อมูลผู้ป่วย');
+      if (!json.success) {
+        setError(json.error || 'ไม่พบข้อมูลผู้ป่วย');
         setCheckingAuth(false);
         setLoading(false);
         return;
       }
 
-      if (data.password_hash) {
+      if (json.hasPassword) {
         // Has password, redirect to login
         router.push(`/patient/${patientId}/login`);
       } else {
