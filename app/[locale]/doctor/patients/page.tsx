@@ -63,6 +63,11 @@ interface Hospital {
   name: string;
 }
 
+const getHospitalShort = (name?: string) => {
+  if (!name) return '-';
+  return name.length > 18 ? `${name.slice(0, 18)}…` : name;
+};
+
 export default function DoctorPatientsPage() {
   const [patients, setPatients] = useState<Patient[]>([]);
   const [filteredPatients, setFilteredPatients] = useState<Patient[]>([]);
@@ -644,90 +649,183 @@ export default function DoctorPatientsPage() {
                 {searchQuery ? 'ไม่พบผู้ป่วยที่ค้นหา' : 'ยังไม่มีผู้ป่วยในระบบ'}
               </div>
             ) : (
-              <div className="overflow-x-auto">
-                <table className="w-full">
-                  <thead>
-                    <tr className="border-b">
-                      <th className="text-left p-3">รหัสผู้ป่วย</th>
-                      <th className="text-left p-3">ชื่อ</th>
-                      <th className="text-left p-3">อายุ</th>
-                      <th className="text-left p-3">โรงพยาบาล</th>
-                      <th className="text-left p-3">TKI ปัจจุบัน</th>
-                      <th className="text-left p-3">ระยะโรค</th>
-                      <th className="text-right p-3">จัดการ</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {filteredPatients.map((patient) => (
-                      <motion.tr
-                        key={patient.id}
-                        className="border-b hover:bg-gray-50"
-                        initial={{ opacity: 0, y: 10 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ duration: 0.2 }}
-                      >
-                        <td className="p-3 font-mono text-sm">{patient.patient_id}</td>
-                        <td className="p-3">{patient.name}</td>
-                        <td className="p-3">{patient.age}</td>
-                        <td className="p-3">{patient.hospital?.name || '-'}</td>
-                        <td className="p-3">{patient.current_tki || '-'}</td>
-                        <td className="p-3">{patient.phase}</td>
-                        <td className="p-3">
-                          <div className="flex justify-end gap-2">
-                            <button
-                              onClick={() => {
-                                setSelectedPatient(patient);
-                                setIsDetailModalOpen(true);
-                              }}
-                              className="p-2 text-indigo-600 hover:bg-indigo-50 rounded"
-                              title="ดูรายละเอียด"
-                            >
-                              <Eye className="w-4 h-4" />
-                            </button>
-                            <button
-                              onClick={() => {
-                                setSelectedPatient(patient);
-                                setIsQRModalOpen(true);
-                              }}
-                              className="p-2 text-green-600 hover:bg-green-50 rounded"
-                              title="ดู QR Code"
-                            >
-                              <QrCode className="w-4 h-4" />
-                            </button>
-                            <button
-                              onClick={() => handleEditPatient(patient)}
-                              className="p-2 text-blue-600 hover:bg-blue-50 rounded"
-                              title="แก้ไข"
-                            >
-                              <Edit className="w-4 h-4" />
-                            </button>
-                            <button
-                              onClick={() => handleOpenRQPCR(patient)}
-                              className="p-2 text-green-600 hover:bg-green-50 rounded"
-                              title="ลงข้อมูล RQ PCR"
-                            >
-                              <TestTube className="w-4 h-4" />
-                            </button>
-                            <button
-                              onClick={() => handleOpenTKI(patient)}
-                              className="p-2 text-purple-600 hover:bg-purple-50 rounded"
-                              title="ลงข้อมูลเปลี่ยนยา TKI"
-                            >
-                              <Pill className="w-4 h-4" />
-                            </button>
-                            <button
-                              onClick={() => handleOpenMutation(patient)}
-                              className="p-2 text-orange-600 hover:bg-orange-50 rounded"
-                              title="ลงข้อมูล Mutation"
-                            >
-                              <FileEdit className="w-4 h-4" />
-                            </button>
-                          </div>
-                        </td>
-                      </motion.tr>
-                    ))}
-                  </tbody>
-                </table>
+              <div className="space-y-4">
+                {/* Legend for mobile */}
+                <div className="md:hidden bg-white rounded-lg border p-3">
+                  <p className="text-sm font-semibold mb-2">คำอธิบายไอคอน</p>
+                  <div className="grid grid-cols-3 gap-2 text-xs text-gray-700">
+                    <div className="flex items-center gap-2"><Eye className="w-4 h-4 text-indigo-600" />ดู</div>
+                    <div className="flex items-center gap-2"><QrCode className="w-4 h-4 text-green-600" />QR</div>
+                    <div className="flex items-center gap-2"><Edit className="w-4 h-4 text-blue-600" />แก้ไข</div>
+                    <div className="flex items-center gap-2"><TestTube className="w-4 h-4 text-green-600" />RQ-PCR</div>
+                    <div className="flex items-center gap-2"><Pill className="w-4 h-4 text-purple-600" />TKI</div>
+                    <div className="flex items-center gap-2"><FileEdit className="w-4 h-4 text-orange-600" />Mutation</div>
+                  </div>
+                </div>
+
+                {/* Desktop table */}
+                <div className="hidden md:block overflow-x-auto">
+                  <table className="w-full">
+                    <thead>
+                      <tr className="border-b">
+                        <th className="text-left p-3">รหัสผู้ป่วย</th>
+                        <th className="text-left p-3">ชื่อ</th>
+                        <th className="text-left p-3">อายุ</th>
+                        <th className="text-left p-3">โรงพยาบาล</th>
+                        <th className="text-left p-3">TKI ปัจจุบัน</th>
+                        <th className="text-left p-3">ระยะโรค</th>
+                        <th className="text-right p-3">จัดการ</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {filteredPatients.map((patient) => (
+                        <motion.tr
+                          key={patient.id}
+                          className="border-b hover:bg-gray-50"
+                          initial={{ opacity: 0, y: 10 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          transition={{ duration: 0.2 }}
+                        >
+                          <td className="p-3 font-mono text-sm">{patient.patient_id}</td>
+                          <td className="p-3">{patient.name}</td>
+                          <td className="p-3">{patient.age}</td>
+                          <td className="p-3">{patient.hospital?.name || '-'}</td>
+                          <td className="p-3">{patient.current_tki || '-'}</td>
+                          <td className="p-3">{patient.phase}</td>
+                          <td className="p-3">
+                            <div className="flex justify-end gap-2">
+                              <button
+                                onClick={() => {
+                                  setSelectedPatient(patient);
+                                  setIsDetailModalOpen(true);
+                                }}
+                                className="p-2 text-indigo-600 hover:bg-indigo-50 rounded"
+                                title="ดูรายละเอียด"
+                              >
+                                <Eye className="w-4 h-4" />
+                              </button>
+                              <button
+                                onClick={() => {
+                                  setSelectedPatient(patient);
+                                  setIsQRModalOpen(true);
+                                }}
+                                className="p-2 text-green-600 hover:bg-green-50 rounded"
+                                title="ดู QR Code"
+                              >
+                                <QrCode className="w-4 h-4" />
+                              </button>
+                              <button
+                                onClick={() => handleEditPatient(patient)}
+                                className="p-2 text-blue-600 hover:bg-blue-50 rounded"
+                                title="แก้ไข"
+                              >
+                                <Edit className="w-4 h-4" />
+                              </button>
+                              <button
+                                onClick={() => handleOpenRQPCR(patient)}
+                                className="p-2 text-green-600 hover:bg-green-50 rounded"
+                                title="ลงข้อมูล RQ PCR"
+                              >
+                                <TestTube className="w-4 h-4" />
+                              </button>
+                              <button
+                                onClick={() => handleOpenTKI(patient)}
+                                className="p-2 text-purple-600 hover:bg-purple-50 rounded"
+                                title="ลงข้อมูลเปลี่ยนยา TKI"
+                              >
+                                <Pill className="w-4 h-4" />
+                              </button>
+                              <button
+                                onClick={() => handleOpenMutation(patient)}
+                                className="p-2 text-orange-600 hover:bg-orange-50 rounded"
+                                title="ลงข้อมูล Mutation"
+                              >
+                                <FileEdit className="w-4 h-4" />
+                              </button>
+                            </div>
+                          </td>
+                        </motion.tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+
+                {/* Mobile cards */}
+                <div className="md:hidden space-y-3">
+                  {filteredPatients.map((patient) => (
+                    <div
+                      key={patient.id}
+                      className="bg-white border rounded-lg shadow-sm p-3 space-y-2"
+                    >
+                      <div className="flex items-center justify-between gap-2">
+                        <div className="min-w-0">
+                          <p className="text-sm font-bold text-gray-900 truncate">{patient.patient_id}</p>
+                          <p className="text-sm text-gray-800 truncate">{patient.name}</p>
+                          <p className="text-xs text-gray-500 truncate">
+                            อายุ {patient.age || '-'} • {getHospitalShort(patient.hospital?.name)}
+                          </p>
+                        </div>
+                        <span className="text-xs text-gray-500 capitalize">{patient.phase}</span>
+                      </div>
+                      <div className="grid grid-cols-3 gap-2 text-xs">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="flex items-center justify-center gap-1 py-1 text-indigo-700"
+                          onClick={() => {
+                            setSelectedPatient(patient);
+                            setIsDetailModalOpen(true);
+                          }}
+                        >
+                          <Eye className="w-4 h-4" /> ดู
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="flex items-center justify-center gap-1 py-1 text-green-700"
+                          onClick={() => {
+                            setSelectedPatient(patient);
+                            setIsQRModalOpen(true);
+                          }}
+                        >
+                          <QrCode className="w-4 h-4" /> QR
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="flex items-center justify-center gap-1 py-1 text-blue-700"
+                          onClick={() => handleEditPatient(patient)}
+                        >
+                          <Edit className="w-4 h-4" /> แก้ไข
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="flex items-center justify-center gap-1 py-1 text-green-700"
+                          onClick={() => handleOpenRQPCR(patient)}
+                        >
+                          <TestTube className="w-4 h-4" /> RQ-PCR
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="flex items-center justify-center gap-1 py-1 text-purple-700"
+                          onClick={() => handleOpenTKI(patient)}
+                        >
+                          <Pill className="w-4 h-4" /> TKI
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="flex items-center justify-center gap-1 py-1 text-orange-700"
+                          onClick={() => handleOpenMutation(patient)}
+                        >
+                          <FileEdit className="w-4 h-4" /> Mutation
+                        </Button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
               </div>
             )}
           </CardContent>
