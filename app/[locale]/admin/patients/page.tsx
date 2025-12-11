@@ -58,6 +58,11 @@ interface Patient {
   next_rq_pcr_date_range_end?: string;
 }
 
+const getHospitalShort = (name?: string) => {
+  if (!name) return '-';
+  return name.length > 18 ? `${name.slice(0, 18)}…` : name;
+};
+
 export default function AdminPatientsPage() {
   const searchParams = useSearchParams();
   const filter = searchParams.get('filter');
@@ -367,104 +372,201 @@ export default function AdminPatientsPage() {
         {loading ? (
           <div className="text-center py-12">Loading...</div>
         ) : (
-          <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-gray-200 bg-white rounded-lg shadow">
-              <thead className="bg-gray-50">
-                <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">รหัสผู้ป่วย</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">ชื่อ</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">อายุ</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">โรงพยาบาล</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">TKI</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">ระยะโรค</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">จัดการ</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-200">
-                {filteredPatients.length === 0 ? (
+          <>
+            {/* Desktop table */}
+            <div className="hidden md:block overflow-x-auto">
+              <table className="min-w-full divide-y divide-gray-200 bg-white rounded-lg shadow">
+                <thead className="bg-gray-50">
                   <tr>
-                    <td colSpan={7} className="px-6 py-12 text-center text-gray-500">
-                      {filter === 'appointments' 
-                        ? 'ไม่พบผู้ป่วยที่มีนัดหมายใกล้เคียง' 
-                        : 'ไม่พบข้อมูลผู้ป่วย'}
-                    </td>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">รหัสผู้ป่วย</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">ชื่อ</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">อายุ</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">โรงพยาบาล</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">TKI</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">ระยะโรค</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">จัดการ</th>
                   </tr>
-                ) : (
-                  filteredPatients.map((patient) => (
-                  <tr key={patient.id} className="hover:bg-gray-50">
-                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                      {patient.patient_id}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      {patient.name}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      {patient.age}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      {patient.hospital?.name || '-'}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      {patient.current_tki || '-'}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      {patient.phase}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                      <div className="flex gap-2">
-                        <button
-                          onClick={() => {
-                            setSelectedPatient(patient);
-                            setIsDetailModalOpen(true);
-                          }}
-                          className="text-indigo-600 hover:text-indigo-900"
-                          title="ดูรายละเอียด"
-                        >
-                          <Eye className="w-4 h-4" />
-                        </button>
-                        <button
-                          onClick={() => {
-                            setSelectedPatient(patient);
-                            setIsQRModalOpen(true);
-                          }}
-                          className="text-green-600 hover:text-green-900"
-                          title="ดู QR Code"
-                        >
-                          <QrCode className="w-4 h-4" />
-                        </button>
-                        <button
-                          onClick={() => {
-                            setSelectedPatient(patient);
-                            setIsResetPasswordModalOpen(true);
-                            setNewPassword('');
-                          }}
-                          className="text-purple-600 hover:text-purple-900"
-                          title="ปลดล็อกรหัสผ่าน"
-                        >
-                          <Key className="w-4 h-4" />
-                        </button>
-                        <button
-                          onClick={() => handleEdit(patient)}
-                          className="text-blue-600 hover:text-blue-900"
-                          title="แก้ไข"
-                        >
-                          <Edit className="w-4 h-4" />
-                        </button>
-                        <button
-                          onClick={() => handleDelete(patient.id)}
-                          className="text-red-600 hover:text-red-900"
-                          title="ลบ"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </button>
+                </thead>
+                <tbody className="divide-y divide-gray-200">
+                  {filteredPatients.length === 0 ? (
+                    <tr>
+                      <td colSpan={7} className="px-6 py-12 text-center text-gray-500">
+                        {filter === 'appointments' 
+                          ? 'ไม่พบผู้ป่วยที่มีนัดหมายใกล้เคียง' 
+                          : 'ไม่พบข้อมูลผู้ป่วย'}
+                      </td>
+                    </tr>
+                  ) : (
+                    filteredPatients.map((patient) => (
+                    <tr key={patient.id} className="hover:bg-gray-50">
+                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                        {patient.patient_id}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                        {patient.name}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                        {patient.age}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                        {patient.hospital?.name || '-'}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                        {patient.current_tki || '-'}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                        {patient.phase}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                        <div className="flex gap-2">
+                          <button
+                            onClick={() => {
+                              setSelectedPatient(patient);
+                              setIsDetailModalOpen(true);
+                            }}
+                            className="text-indigo-600 hover:text-indigo-900"
+                            title="ดูรายละเอียด"
+                          >
+                            <Eye className="w-4 h-4" />
+                          </button>
+                          <button
+                            onClick={() => {
+                              setSelectedPatient(patient);
+                              setIsQRModalOpen(true);
+                            }}
+                            className="text-green-600 hover:text-green-900"
+                            title="ดู QR Code"
+                          >
+                            <QrCode className="w-4 h-4" />
+                          </button>
+                          <button
+                            onClick={() => {
+                              setSelectedPatient(patient);
+                              setIsResetPasswordModalOpen(true);
+                              setNewPassword('');
+                            }}
+                            className="text-purple-600 hover:text-purple-900"
+                            title="ปลดล็อกรหัสผ่าน"
+                          >
+                            <Key className="w-4 h-4" />
+                          </button>
+                          <button
+                            onClick={() => handleEdit(patient)}
+                            className="text-blue-600 hover:text-blue-900"
+                            title="แก้ไข"
+                          >
+                            <Edit className="w-4 h-4" />
+                          </button>
+                          <button
+                            onClick={() => handleDelete(patient.id)}
+                            className="text-red-600 hover:text-red-900"
+                            title="ลบ"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </div>
+
+            {/* Mobile cards */}
+            <div className="md:hidden space-y-3">
+              <div className="bg-white rounded-lg border p-3">
+                <p className="text-sm font-semibold mb-2">คำอธิบายไอคอน</p>
+                <div className="grid grid-cols-3 gap-2 text-xs text-gray-700">
+                  <div className="flex items-center gap-2"><Eye className="w-4 h-4 text-indigo-600" />ดู</div>
+                  <div className="flex items-center gap-2"><QrCode className="w-4 h-4 text-green-600" />QR</div>
+                  <div className="flex items-center gap-2"><Key className="w-4 h-4 text-purple-600" />รหัส</div>
+                  <div className="flex items-center gap-2"><Edit className="w-4 h-4 text-blue-600" />แก้ไข</div>
+                  <div className="flex items-center gap-2"><Trash2 className="w-4 h-4 text-red-600" />ลบ</div>
+                </div>
+              </div>
+
+              {filteredPatients.length === 0 ? (
+                <Card>
+                  <CardContent className="p-6 text-center text-gray-500">
+                    {filter === 'appointments' 
+                      ? 'ไม่พบผู้ป่วยที่มีนัดหมายใกล้เคียง' 
+                      : 'ไม่พบข้อมูลผู้ป่วย'}
+                  </CardContent>
+                </Card>
+              ) : (
+                filteredPatients.map((patient) => (
+                  <div
+                    key={patient.id}
+                    className="bg-white border rounded-lg shadow-sm p-3 space-y-2"
+                  >
+                    <div className="flex items-center justify-between gap-2">
+                      <div className="min-w-0">
+                        <p className="text-sm font-bold text-gray-900 truncate">{patient.patient_id}</p>
+                        <p className="text-sm text-gray-800 truncate">{patient.name}</p>
+                        <p className="text-xs text-gray-500 truncate">
+                          อายุ {patient.age || '-'} • {getHospitalShort(patient.hospital?.name)}
+                        </p>
                       </div>
-                    </td>
-                  </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
-          </div>
+                      <span className="text-xs text-gray-500 capitalize">{patient.phase}</span>
+                    </div>
+                    <div className="grid grid-cols-3 gap-2 text-xs">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="flex items-center justify-center gap-1 py-1 text-indigo-700"
+                        onClick={() => {
+                          setSelectedPatient(patient);
+                          setIsDetailModalOpen(true);
+                        }}
+                      >
+                        <Eye className="w-4 h-4" /> ดู
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="flex items-center justify-center gap-1 py-1 text-green-700"
+                        onClick={() => {
+                          setSelectedPatient(patient);
+                          setIsQRModalOpen(true);
+                        }}
+                      >
+                        <QrCode className="w-4 h-4" /> QR
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="flex items-center justify-center gap-1 py-1 text-purple-700"
+                        onClick={() => {
+                          setSelectedPatient(patient);
+                          setIsResetPasswordModalOpen(true);
+                          setNewPassword('');
+                        }}
+                      >
+                        <Key className="w-4 h-4" /> รหัส
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="flex items-center justify-center gap-1 py-1 text-blue-700"
+                        onClick={() => handleEdit(patient)}
+                      >
+                        <Edit className="w-4 h-4" /> แก้ไข
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="flex items-center justify-center gap-1 py-1 text-red-700"
+                        onClick={() => handleDelete(patient.id)}
+                      >
+                        <Trash2 className="w-4 h-4" /> ลบ
+                      </Button>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+          </>
         )}
 
         {isModalOpen && (
